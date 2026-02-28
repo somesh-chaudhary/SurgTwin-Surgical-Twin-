@@ -87,7 +87,7 @@ For research and educational use only..
 
 ---
 
-## Screenshort
+## 📷Screenshort
 ---
 <img width="1915" height="911" alt="image" src="https://github.com/user-attachments/assets/57223d4f-cbd6-4091-9ebc-dfa909b37720" />
 

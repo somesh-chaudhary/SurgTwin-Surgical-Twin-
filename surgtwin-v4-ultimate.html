@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SurgTwin 4.0 — Interactive Digital Twin Surgery</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#020b15;--bg2:#040f1e;--bg3:#061525;--bg4:#0a1e30;
+  --b1:#0e2a42;--b2:#163d5e;--b3:#1f5278;
+  --c:#00d4ff;--c2:#00aacc;--c3:#007a99;
+  --g:#00ff88;--g2:#00cc6a;--g3:#008844;
+  --r:#ff2d55;--r2:#cc1f3e;
+  --a:#ffb700;--a2:#cc9200;
+  --p:#a855f7;
+  --t:#c0ddf0;--t2:#7aa8c8;--t3:#3a6a88;
+  --w:#e8f6ff;
+  --glow-c:0 0 20px rgba(0,212,255,.25);
+  --glow-g:0 0 20px rgba(0,255,136,.25);
+  --glow-r:0 0 20px rgba(255,45,85,.25);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-family:'Exo 2',sans-serif}
+
+/* ─── SPLASH ─── */
+#splash{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.splash-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0,212,255,.04) 0%, transparent 70%)}
+.splash-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:50px 50px}
+.splash-rings{position:absolute;width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%)}
+.splash-ring{position:absolute;border-radius:50%;border:1px solid;animation:ringPulse 3s ease infinite}
+.splash-ring:nth-child(1){inset:20px;border-color:rgba(0,212,255,.15);animation-delay:0s}
+.splash-ring:nth-child(2){inset:50px;border-color:rgba(0,212,255,.1);animation-delay:.5s}
+.splash-ring:nth-child(3){inset:80px;border-color:rgba(0,212,255,.06);animation-delay:1s}
+@keyframes ringPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.05);opacity:.5}}
+.s-logo{font-family:'Orbitron',monospace;font-size:52px;font-weight:900;letter-spacing:6px;color:var(--c);text-shadow:0 0 60px rgba(0,212,255,.5),0 0 120px rgba(0,212,255,.2);position:relative;z-index:1;animation:logoIn 1s ease forwards}
+.s-logo em{color:var(--r);font-style:normal}
+@keyframes logoIn{from{opacity:0;letter-spacing:20px}to{opacity:1;letter-spacing:6px}}
+.s-sub{font-size:11px;letter-spacing:6px;color:var(--t3);position:relative;z-index:1;text-transform:uppercase}
+.s-bar-wrap{width:340px;position:relative;z-index:1}
+.s-bar{height:2px;background:var(--b1);border-radius:1px;overflow:hidden;margin-bottom:8px}
+.s-bar-fill{height:100%;background:linear-gradient(90deg,var(--c),var(--g));width:0%;transition:width .08s linear;box-shadow:0 0 12px var(--c)}
+.s-status{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--t3);letter-spacing:2px;text-align:center}
+.s-ver{position:absolute;bottom:20px;right:24px;font-size:9px;color:var(--t3);letter-spacing:2px;font-family:'Share Tech Mono',monospace}
+
+/* ─── APP ─── */
+#app{display:none;width:100vw;height:100vh;flex-direction:column}
+#app.on{display:flex}
+
+/* ─── TOPBAR ─── */
+.tb{height:48px;min-height:48px;background:var(--bg2);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 14px;gap:12px;z-index:10}
+.tb-logo{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;color:var(--c);letter-spacing:4px;white-space:nowrap;text-shadow:0 0 20px rgba(0,212,255,.4)}
+.tb-logo em{color:var(--r);font-style:normal}
+.tb-div{width:1px;height:26px;background:var(--b1)}
+.tb-pat{display:flex;align-items:center;gap:8px;padding:3px 10px;border:1px solid var(--b1);border-radius:3px;background:var(--bg3);cursor:pointer;transition:.2s}
+.tb-pat:hover{border-color:var(--b2)}
+.tb-dot{width:7px;height:7px;border-radius:50%;background:var(--g);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.tb-pname{font-size:12px;font-weight:600;color:var(--w);letter-spacing:.5px}
+.tb-pid{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--t3);letter-spacing:1px}
+.tb-sp{flex:1}
+.tb-vitals{display:flex;gap:18px}
+.tv{text-align:center}
+.tv-v{font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:700;color:var(--c)}
+.tv-v.r{color:var(--r)}.tv-v.g{color:var(--g)}.tv-v.a{color:var(--a)}
+.tv-l{font-size:8px;letter-spacing:2px;color:var(--t3)}
+.tb-alert{display:flex;align-items:center;gap:5px;background:rgba(255,45,85,.08);border:1px solid rgba(255,45,85,.35);padding:3px 10px;border-radius:2px;font-size:10px;color:var(--r);letter-spacing:1px;animation:alertPulse 2s infinite}
+@keyframes alertPulse{0%,100%{opacity:1}50%{opacity:.6}}
+.tb-adot{width:5px;height:5px;border-radius:50%;background:var(--r)}
+.tb-clock{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--t3);letter-spacing:2px;padding:0 8px}
+.voice-btn{background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.35);color:#a855f7;padding:4px 10px;border-radius:3px;font-family:'Exo 2',sans-serif;font-size:10px;letter-spacing:1px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:5px}
+.voice-btn:hover,.voice-btn.on{background:rgba(168,85,247,.2);border-color:#a855f7;box-shadow:0 0 12px rgba(168,85,247,.3)}
+
+/* ─── NAV TABS ─── */
+.nav{display:flex;background:var(--bg2);border-bottom:1px solid var(--b1);padding:0 14px;gap:1px}
+.nt{padding:9px 18px;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--t3);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.2s;font-family:'Exo 2',sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.nt:hover{color:var(--t)}
+.nt.on{color:var(--c);border-bottom-color:var(--c)}
+.nt-badge{background:var(--r);color:#fff;font-size:8px;padding:1px 4px;border-radius:8px;font-family:'Share Tech Mono',monospace}
+.nt-badge.g{background:var(--g3)}
+
+/* ─── CONTENT ─── */
+.content{flex:1;overflow:hidden;display:flex;position:relative}
+.screen{display:none;width:100%;height:100%}
+.screen.on{display:flex}
+
+/* ─── PANELS ─── */
+.col{background:var(--bg2);overflow-y:auto;overflow-x:hidden}
+.col::-webkit-scrollbar{width:3px}
+.col::-webkit-scrollbar-thumb{background:var(--b2)}
+.sh{padding:7px 13px;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--b1);background:rgba(0,0,0,.15);display:flex;align-items:center;gap:8px}
+.sh::before{content:'';width:10px;height:1px;background:var(--c)}
+.sb{padding:11px 13px}
+
+/* ─── VITALS ─── */
+.vg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.vcard{background:var(--bg3);border:1px solid var(--b1);border-radius:3px;padding:7px;text-align:center;transition:.2s}
+.vcard:hover{border-color:var(--b2)}
+.vv{font-family:'Share Tech Mono',monospace;font-size:17px;font-weight:700;color:var(--c);line-height:1}
+.vv.r{color:var(--r)}.vv.g{color:var(--g)}.vv.a{color:var(--a)}
+.vl{font-size:8px;letter-spacing:1px;color:var(--t3);margin-top:2px}
+
+/* ─── INFO TABLE ─── */
+.itbl{width:100%;border-collapse:collapse}
+.itbl td{padding:4px 0;font-size:11px;border-bottom:1px solid rgba(14,42,66,.4)}
+.itbl td:first-child{color:var(--t3);font-size:10px}
+.itbl td:last-child{text-align:right;color:var(--t)}
+.tag{display:inline-block;padding:1px 5px;border-radius:2px;font-size:9px;font-weight:700;letter-spacing:1px}
+.tw{background:rgba(255,183,0,.12);color:var(--a);border:1px solid rgba(255,183,0,.3)}
+.tc{background:rgba(255,45,85,.12);color:var(--r);border:1px solid rgba(255,45,85,.3)}
+.tok{background:rgba(0,255,136,.08);color:var(--g);border:1px solid rgba(0,255,136,.25)}
+
+/* ─── ECG ─── */
+.ecg-wrap{padding:8px 13px 13px;border-bottom:1px solid var(--b1)}
+.ecg-l{font-size:8px;letter-spacing:2px;color:var(--t3);margin-bottom:4px}
+
+/* ─── SCAN UPLOAD ─── */
+.scan-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.scan-card{position:relative;aspect-ratio:1;border:1px solid var(--b1);border-radius:3px;overflow:hidden;cursor:pointer;transition:.2s}
+.scan-card:hover{border-color:var(--b2)}
+.scan-card.alert{border-color:rgba(255,45,85,.5);animation:sAlert 2s infinite}
+@keyframes sAlert{0%,100%{border-color:rgba(255,45,85,.5)}50%{border-color:rgba(255,45,85,.15)}}
+.scan-card canvas{width:100%;height:100%;display:block}
+.scan-ol{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:3px 5px 4px;display:flex;justify-content:space-between;align-items:flex-end}
+.scan-type{font-size:8px;letter-spacing:2px;color:var(--c);font-family:'Share Tech Mono',monospace}
+.scan-flag{font-size:9px;color:var(--r);font-weight:700}
+.upload-zone{border:1.5px dashed var(--b2);border-radius:3px;padding:10px;text-align:center;cursor:pointer;transition:.2s;background:rgba(0,212,255,.02);margin:0 13px 10px}
+.upload-zone:hover{border-color:var(--c);background:rgba(0,212,255,.05)}
+.upload-zone input{display:none}
+.uz-icon{font-size:18px;margin-bottom:4px}
+.uz-txt{font-size:10px;color:var(--t3);letter-spacing:1px}
+
+/* ─── RISK BARS ─── */
+.risk-item{margin-bottom:10px}
+.risk-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.risk-row span:last-child{font-family:'Share Tech Mono',monospace;font-size:10px}
+.risk-tr{height:3px;background:var(--b1);border-radius:2px;overflow:hidden}
+.risk-bar{height:100%;border-radius:2px;transition:width 1s ease}
+
+/* ─── FINDINGS ─── */
+.finding{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--b1)}
+.finding:last-child{border:none}
+.fdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.ft{font-size:11px;line-height:1.5}
+.ft strong{display:block;font-size:12px;color:var(--w);margin-bottom:2px}
+
+/* ─── READINESS RING ─── */
+.rring-wrap{text-align:center;padding:12px}
+.rring{width:110px;height:110px;margin:0 auto 8px;position:relative;display:flex;align-items:center;justify-content:center}
+.rring svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.rring-val{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;color:var(--g);z-index:1}
+.rring-lbl{font-size:8px;letter-spacing:2px;color:var(--t3)}
+
+/* ─── 3D TWIN SCREEN ─── */
+.twin-layout{display:grid;grid-template-columns:190px 1fr 210px;width:100%;height:100%;gap:1px;background:var(--b1)}
+.twin-vp{background:#010911;position:relative}
+#twinCanvas{width:100%;height:100%;display:block}
+.twin-hud{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:3px;pointer-events:none}
+.hud-t{font-size:9px;letter-spacing:2px;padding:3px 9px;border-left:2px solid var(--c);background:rgba(0,212,255,.07);color:var(--c)}
+.hud-t.w{border-left-color:var(--r);color:var(--r);background:rgba(255,45,85,.07)}
+.hud-t.ok{border-left-color:var(--g);color:var(--g);background:rgba(0,255,136,.07)}
+.twin-ctrl{position:absolute;bottom:10px;right:10px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.cbtn{background:rgba(4,15,30,.85);border:1px solid var(--b2);color:var(--t2);font-family:'Exo 2',sans-serif;font-size:9px;letter-spacing:1px;padding:4px 8px;cursor:pointer;border-radius:2px;transition:.2s;backdrop-filter:blur(6px)}
+.cbtn:hover,.cbtn.on{border-color:var(--c);color:var(--c);background:rgba(0,212,255,.08)}
+.organ-btn{margin:6px;border:1px solid var(--b1);border-radius:3px;padding:9px;cursor:pointer;transition:.2s;background:var(--bg3)}
+.organ-btn:hover{border-color:var(--b2)}
+.organ-btn.sel{border-color:var(--c);background:rgba(0,212,255,.06)}
+.organ-btn.crit{border-color:rgba(255,45,85,.3)}
+.organ-btn.crit.sel{border-color:var(--r);background:rgba(255,45,85,.06)}
+.ob-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.ob-n{font-size:12px;font-weight:600;color:var(--w)}
+.ob-bar{height:2px;background:var(--b1);border-radius:1px;margin-top:5px}
+.ob-fill{height:100%;border-radius:1px}
+.detail-box{margin:8px;border:1px solid var(--b1);border-radius:3px;padding:11px;background:var(--bg3)}
+.detail-box h4{font-size:10px;letter-spacing:2px;color:var(--c);margin-bottom:8px}
+.dr{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid rgba(14,42,66,.4)}
+.dr:last-child{border:none}
+.dr span:last-child{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--c)}
+
+/* ─── SURGERY SIMULATION ─── */
+.sim-layout{display:grid;grid-template-columns:200px 1fr 270px;width:100%;height:100%;gap:1px;background:var(--b1)}
+.sim-left,.sim-right{background:var(--bg2);display:flex;flex-direction:column;overflow-y:auto}
+.sim-left::-webkit-scrollbar,.sim-right::-webkit-scrollbar{width:3px}
+.sim-left::-webkit-scrollbar-thumb,.sim-right::-webkit-scrollbar-thumb{background:var(--b2)}
+.sim-center{background:#010911;display:flex;flex-direction:column;position:relative}
+#simCanvas{flex:1;display:block;cursor:crosshair;width:100%}
+.sim-bar-wrap{padding:6px 12px;border-top:1px solid var(--b1);background:var(--bg2)}
+.sb-row{display:flex;justify-content:space-between;font-size:8px;letter-spacing:1px;color:var(--t3);margin-bottom:3px}
+.sb-track{height:3px;background:var(--b1);border-radius:2px}
+.sb-fill{height:100%;background:linear-gradient(90deg,var(--c),var(--g));border-radius:2px;transition:width .4s ease;box-shadow:0 0 5px var(--c)}
+.sim-ctrls{padding:8px 12px;border-top:1px solid var(--b1);background:var(--bg2);display:flex;gap:6px}
+.scbtn{flex:1;padding:9px;border-radius:2px;font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:.2s;border:1px solid}
+.scbtn.p{background:rgba(0,212,255,.08);border-color:var(--c);color:var(--c)}
+.scbtn.p:hover{background:rgba(0,212,255,.18);box-shadow:var(--glow-c)}
+.scbtn.d{background:rgba(255,45,85,.08);border-color:var(--r);color:var(--r);flex:.5}
+.scbtn.s{background:rgba(0,255,136,.08);border-color:var(--g);color:var(--g)}
+
+/* Tool buttons */
+.tbtn{display:flex;align-items:center;gap:9px;padding:9px 12px;cursor:pointer;transition:.2s;border-bottom:1px solid var(--b1);border-left:3px solid transparent}
+.tbtn:hover{background:rgba(0,212,255,.03)}
+.tbtn.sel{border-left-color:var(--c);background:rgba(0,212,255,.06)}
+.tbtn.sel .t-name{color:var(--c)}
+.ti{width:34px;height:34px;border-radius:3px;background:var(--bg3);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;transition:.2s}
+.tbtn.sel .ti{border-color:var(--c);background:rgba(0,212,255,.1);box-shadow:var(--glow-c)}
+.t-name{font-size:12px;font-weight:600;color:var(--w)}
+.t-desc{font-size:9px;color:var(--t3);margin-top:1px}
+
+/* Sim HUD overlay */
+.sim-hud{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
+.sim-steps{display:flex;align-items:center;gap:3px;background:rgba(4,15,30,.9);border:1px solid var(--b2);padding:5px 10px;border-radius:3px;backdrop-filter:blur(8px)}
+.ss{width:22px;height:22px;border-radius:50%;border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--t3);transition:.2s}
+.ss.done{background:var(--g3);border-color:var(--g);color:var(--bg)}
+.ss.act{background:var(--c3);border-color:var(--c);color:var(--bg);box-shadow:0 0 10px rgba(0,212,255,.5)}
+.ss-line{width:12px;height:1px;background:var(--b2)}
+.sim-stats{display:flex;gap:6px}
+.sstat{background:rgba(4,15,30,.9);border:1px solid var(--b2);padding:6px 12px;border-radius:3px;backdrop-filter:blur(8px);min-width:80px}
+.sstat-v{font-family:'Share Tech Mono',monospace;font-size:18px;font-weight:700;color:var(--c)}
+.sstat-v.g{color:var(--g)}.sstat-v.r{color:var(--r)}.sstat-v.a{color:var(--a)}
+.sstat-l{font-size:8px;letter-spacing:2px;color:var(--t3)}
+.sim-feedback{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);pointer-events:none;text-align:center}
+.sf-msg{font-family:'Orbitron',monospace;font-size:20px;font-weight:700;letter-spacing:3px;opacity:0;transition:.2s}
+.sf-msg.show{animation:sfFade 2.5s ease forwards}
+@keyframes sfFade{0%{opacity:0;transform:translateY(-10px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
+.hint-tag{position:absolute;bottom:70px;left:10px;background:rgba(4,15,30,.9);border:1px solid var(--b2);padding:6px 12px;border-radius:3px;font-size:10px;color:var(--t2);letter-spacing:1px;backdrop-filter:blur(6px);pointer-events:none}
+
+/* AI Feedback */
+.ai-panel{padding:0}
+.ai-loading{padding:12px;display:none;align-items:center;gap:8px;font-size:11px;color:var(--t3)}
+.ai-loading.show{display:flex}
+.ai-spinner{width:14px;height:14px;border:2px solid var(--b2);border-top-color:var(--c);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-msg{margin:8px;padding:10px;border-radius:3px;font-size:11px;line-height:1.6;display:none}
+.ai-msg.show{display:block}
+.ai-msg.ok{background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);color:var(--t)}
+.ai-msg.warn{background:rgba(255,183,0,.06);border:1px solid rgba(255,183,0,.2);color:var(--t)}
+.ai-msg.crit{background:rgba(255,45,85,.06);border:1px solid rgba(255,45,85,.2);color:var(--t)}
+.ai-msg-head{font-size:10px;letter-spacing:2px;margin-bottom:6px;font-weight:700}
+.ai-history{padding:8px 10px;max-height:200px;overflow-y:auto}
+.ai-history::-webkit-scrollbar{width:2px}
+.ai-history::-webkit-scrollbar-thumb{background:var(--b2)}
+.ai-hist-item{padding:6px 0;border-bottom:1px solid var(--b1);font-size:10px;color:var(--t3);line-height:1.5}
+.ai-hist-item strong{color:var(--c);display:block;margin-bottom:2px}
+.ai-hist-item:last-child{border:none}
+
+/* Score ring */
+.score-ring{width:90px;height:90px;margin:8px auto;position:relative;display:flex;align-items:center;justify-content:center}
+.score-ring svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.sr-v{font-family:'Orbitron',monospace;font-size:18px;font-weight:900;color:var(--g);z-index:1}
+.sr-l{font-size:8px;letter-spacing:1px;color:var(--t3)}
+
+/* Complications */
+.compl{margin:8px;padding:9px;border-radius:3px;border:1px solid;display:none;animation:compShake .3s ease}
+.compl.show{display:block}
+@keyframes compShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.compl.w{border-color:rgba(255,183,0,.3);background:rgba(255,183,0,.06)}
+.compl.r{border-color:rgba(255,45,85,.3);background:rgba(255,45,85,.06)}
+.compl-h{font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:3px}
+.compl-b{font-size:10px;color:var(--t2);line-height:1.5}
+
+/* ─── LEADERBOARD ─── */
+.lb-layout{width:100%;height:100%;display:grid;grid-template-columns:1fr 350px;gap:1px;background:var(--b1)}
+.lb-main{background:var(--bg2);overflow-y:auto;padding:20px}
+.lb-main::-webkit-scrollbar{width:3px}
+.lb-main::-webkit-scrollbar-thumb{background:var(--b2)}
+.lb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.lb-title{font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--c)}
+.lb-sub{font-size:11px;color:var(--t3);letter-spacing:1px;margin-top:4px}
+.lb-table{width:100%;border-collapse:collapse}
+.lb-table th{text-align:left;font-size:9px;letter-spacing:2px;color:var(--t3);padding:6px 10px;border-bottom:1px solid var(--b1);text-transform:uppercase}
+.lb-table td{padding:10px;font-size:12px;border-bottom:1px solid rgba(14,42,66,.4);transition:.2s}
+.lb-table tr:hover td{background:rgba(0,212,255,.03)}
+.rank-badge{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;font-weight:700}
+.r1{background:rgba(255,183,0,.2);border:1px solid var(--a);color:var(--a)}
+.r2{background:rgba(192,192,192,.15);border:1px solid #aaa;color:#ccc}
+.r3{background:rgba(205,127,50,.15);border:1px solid #cd7f32;color:#cd7f32}
+.rn{background:var(--bg3);border:1px solid var(--b1);color:var(--t3)}
+.lb-name{font-weight:600;color:var(--w)}
+.lb-score{font-family:'Share Tech Mono',monospace;color:var(--g)}
+.lb-sims{font-family:'Share Tech Mono',monospace;color:var(--c)}
+.lb-err{font-family:'Share Tech Mono',monospace;color:var(--r)}
+.lb-mine{background:rgba(0,212,255,.05)!important}
+.lb-side{background:var(--bg2);padding:20px;display:flex;flex-direction:column;gap:16px}
+.score-submit{display:flex;flex-direction:column;gap:10px}
+.score-submit h3{font-family:'Orbitron',monospace;font-size:13px;color:var(--c);letter-spacing:2px}
+.s-input{width:100%;background:var(--bg3);border:1px solid var(--b1);color:var(--w);font-family:'Exo 2',sans-serif;font-size:13px;padding:8px 12px;border-radius:3px;outline:none;transition:.2s;letter-spacing:.5px}
+.s-input:focus{border-color:var(--c);box-shadow:0 0 0 2px rgba(0,212,255,.1)}
+.s-submit{width:100%;padding:10px;background:rgba(0,212,255,.1);border:1px solid var(--c);color:var(--c);font-family:'Exo 2',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;border-radius:3px;transition:.2s}
+.s-submit:hover{background:rgba(0,212,255,.2);box-shadow:var(--glow-c)}
+.lb-refresh{width:100%;padding:8px;background:transparent;border:1px solid var(--b2);color:var(--t3);font-family:'Exo 2',sans-serif;font-size:11px;letter-spacing:1px;cursor:pointer;border-radius:3px;transition:.2s}
+.lb-refresh:hover{border-color:var(--b3);color:var(--t2)}
+.no-score-msg{color:var(--t3);font-size:12px;line-height:1.6;padding:10px 0}
+.your-score{background:var(--bg3);border:1px solid var(--b1);border-radius:3px;padding:14px}
+.your-score h4{font-size:10px;letter-spacing:2px;color:var(--c);margin-bottom:10px}
+.ys-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0}
+.ys-row span:last-child{font-family:'Share Tech Mono',monospace;color:var(--g)}
+
+/* ─── AI REPORT ─── */
+.rep-layout{width:100%;height:100%;overflow-y:auto;background:var(--bg2)}
+.rep-layout::-webkit-scrollbar{width:4px}
+.rep-layout::-webkit-scrollbar-thumb{background:var(--b2)}
+.rep-inner{max-width:860px;margin:0 auto;padding:24px 18px}
+.rep-hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:1px solid var(--b1);margin-bottom:20px}
+.rep-logo{font-family:'Orbitron',monospace;font-size:18px;font-weight:900;color:var(--c);letter-spacing:4px}
+.rep-logo em{color:var(--r);font-style:normal}
+.rep-sec{margin-bottom:24px}
+.rep-sec h3{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;color:var(--c);text-transform:uppercase;margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid var(--b1)}
+.rep-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.rc{background:var(--bg3);border:1px solid var(--b1);border-radius:3px;padding:12px;text-align:center}
+.rc-v{font-family:'Share Tech Mono',monospace;font-size:20px;font-weight:700;color:var(--c)}
+.rc-v.g{color:var(--g)}.rc-v.r{color:var(--r)}.rc-v.a{color:var(--a)}
+.rc-l{font-size:9px;letter-spacing:1px;color:var(--t3);margin-top:3px}
+.ready-banner{padding:18px;border-radius:4px;text-align:center;margin-bottom:18px}
+.rb-ok{background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.25)}
+.rb-pend{background:rgba(255,45,85,.06);border:1px solid rgba(255,45,85,.25)}
+.rb-title{font-family:'Orbitron',monospace;font-size:18px;font-weight:900;margin-bottom:5px}
+.rb-sub{font-size:12px;color:var(--t3);letter-spacing:1px}
+.anom-list{display:flex;flex-direction:column;gap:8px}
+.anom{display:flex;gap:10px;padding:10px;border:1px solid var(--b1);border-radius:3px;background:var(--bg3)}
+.anom-sev{width:3px;border-radius:2px;align-self:stretch;flex-shrink:0}
+.anom-b h4{font-size:12px;color:var(--w);margin-bottom:3px}
+.anom-b p{font-size:11px;color:var(--t3);line-height:1.5}
+.ai-rep-content{background:var(--bg3);border:1px solid var(--b1);border-radius:3px;padding:14px;font-size:12px;color:var(--t);line-height:1.7;min-height:60px}
+.ai-rep-content.loading{color:var(--t3);font-style:italic}
+.rep-btn{display:flex;align-items:center;gap:8px;padding:10px 20px;border-radius:3px;background:rgba(0,212,255,.08);border:1px solid var(--c);color:var(--c);font-family:'Exo 2',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:.2s;margin-top:16px}
+.rep-btn:hover{background:rgba(0,212,255,.18);box-shadow:var(--glow-c)}
+.gen-btn{background:rgba(168,85,247,.08);border:1px solid var(--p);color:var(--p);margin-right:8px}
+.gen-btn:hover{background:rgba(168,85,247,.18);box-shadow:0 0 20px rgba(168,85,247,.25)}
+.rep-ai-spinner{display:none;align-items:center;gap:8px;font-size:11px;color:var(--t3);padding:10px 14px}
+.rep-ai-spinner.show{display:flex}
+.r-spinner{width:14px;height:14px;border:2px solid var(--b2);border-top-color:var(--p);border-radius:50%;animation:spin .8s linear infinite}
+
+/* ─── MISC ─── */
+.cdeco{position:absolute;width:16px;height:16px;pointer-events:none}
+.cdeco::before,.cdeco::after{content:'';position:absolute;background:var(--c)}
+.cdeco::before{width:100%;height:1px;top:0;left:0}
+.cdeco::after{width:1px;height:100%;top:0;left:0}
+.cdeco.tr{top:6px;right:6px;transform:rotate(90deg)}
+.cdeco.bl{bottom:6px;left:6px;transform:rotate(270deg)}
+.cdeco.br{bottom:6px;right:6px;transform:rotate(180deg)}
+.cdeco.tl{top:6px;left:6px}
+
+/* ─── MODAL ─── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-bg.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--c);border-radius:6px;padding:28px;max-width:380px;width:90%;box-shadow:0 0 60px rgba(0,212,255,.2);animation:mIn .3s ease}
+@keyframes mIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+.modal h3{font-family:'Orbitron',monospace;font-size:16px;color:var(--g);margin-bottom:16px;letter-spacing:2px}
+.mrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--b1);font-size:12px}
+.mrow span:last-child{font-family:'Share Tech Mono',monospace;color:var(--c)}
+.mclose{margin-top:18px;width:100%;padding:9px;background:transparent;border:1px solid var(--b1);color:var(--t2);font-family:'Exo 2',sans-serif;font-size:12px;letter-spacing:2px;cursor:pointer;border-radius:3px;transition:.2s}
+.mclose:hover{border-color:var(--c);color:var(--c)}
+</style>
+</head>
+<body>
+
+<!-- ═══════ SPLASH ═══════ -->
+<div id="splash">
+  <div class="splash-bg"></div>
+  <div class="splash-grid"></div>
+  <div class="splash-rings"><div class="splash-ring"></div><div class="splash-ring"></div><div class="splash-ring"></div></div>
+  <div class="s-logo">SURG<em>TWIN</em></div>
+  <div class="s-sub">Digital Twin · Virtual Surgery Platform · v4.0</div>
+  <div class="s-bar-wrap">
+    <div class="s-bar"><div class="s-bar-fill" id="sBar"></div></div>
+    <div class="s-status" id="sStatus">INITIALIZING...</div>
+  </div>
+  <div class="s-ver">BUILD 2026.02 · AI-POWERED · INTERACTIVE</div>
+</div>
+
+<!-- ═══════ APP ═══════ -->
+<div id="app">
+  <!-- TOPBAR -->
+  <div class="tb">
+    <div class="tb-logo">SURG<em>TWIN</em></div>
+    <div class="tb-div"></div>
+    <div class="tb-pat">
+      <div class="tb-dot"></div>
+      <div><div class="tb-pname">RAHUL SHARMA</div><div class="tb-pid">PID-2024-XR7491 · CABG×3</div></div>
+    </div>
+    <div class="tb-sp"></div>
+    <div class="tb-vitals">
+      <div class="tv"><div class="tv-v r" id="tbHr">--</div><div class="tv-l">HR</div></div>
+      <div class="tv"><div class="tv-v" id="tbBp">--/--</div><div class="tv-l">BP</div></div>
+      <div class="tv"><div class="tv-v g" id="tbSpo">--%</div><div class="tv-l">SpO₂</div></div>
+      <div class="tv"><div class="tv-v a" id="tbEf">--%</div><div class="tv-l">EF</div></div>
+    </div>
+    <div class="tb-div"></div>
+    <div class="tb-alert"><div class="tb-adot"></div>LAD 78% STENOSIS</div>
+    <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🔊 VOICE</button>
+    <div class="tb-clock" id="tbClock">--:--:--</div>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav">
+    <button class="nt on" onclick="goTab(0,this)">📋 Dashboard</button>
+    <button class="nt" onclick="goTab(1,this)">🧬 3D Twin</button>
+    <button class="nt" onclick="goTab(2,this)">🔪 Surgery Sim <span class="nt-badge" id="simBadge">0</span></button>
+    <button class="nt" onclick="goTab(3,this)">🏆 Leaderboard</button>
+    <button class="nt" onclick="goTab(4,this)">🤖 AI Report <span class="nt-badge g" id="repBadge" style="display:none">NEW</span></button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ══ TAB 0: DASHBOARD ══ -->
+    <div class="screen on" id="s0">
+      <div style="display:grid;grid-template-columns:250px 1fr 270px;width:100%;height:100%;gap:1px;background:var(--b1)">
+        <div class="col">
+          <div class="sh">Patient Profile</div>
+          <div class="sb">
+            <div style="text-align:center;margin-bottom:12px">
+              <div style="width:60px;height:60px;border-radius:50%;border:2px solid var(--c);background:linear-gradient(135deg,#0a2040,#020e1e);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 10px;box-shadow:0 0 20px rgba(0,212,255,.3)">👤</div>
+              <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--w);letter-spacing:1px">RAHUL SHARMA</div>
+              <div style="font-size:10px;color:var(--a);letter-spacing:2px;margin-top:3px">TRIPLE BYPASS · CABG×3</div>
+            </div>
+            <table class="itbl">
+              <tr><td>Age</td><td>52 yr</td></tr>
+              <tr><td>Blood Type</td><td>B+</td></tr>
+              <tr><td>Weight</td><td>78 kg</td></tr>
+              <tr><td>Diabetes</td><td><span class="tag tw">TYPE II</span></td></tr>
+              <tr><td>Hypertension</td><td><span class="tag tw">STAGE 2</span></td></tr>
+              <tr><td>LAD Stenosis</td><td><span class="tag tc">78% CRITICAL</span></td></tr>
+              <tr><td>EF</td><td><span class="tag tw">42% (↓ LOW)</span></td></tr>
+              <tr><td>Risk Class</td><td><span class="tag tc">HIGH ⚠</span></td></tr>
+            </table>
+          </div>
+          <div class="sh" style="margin-top:0">Live Vitals</div>
+          <div class="sb"><div class="vg">
+            <div class="vcard"><div class="vv r" id="v_hr">74</div><div class="vl">HEART RATE</div></div>
+            <div class="vcard"><div class="vv" id="v_bp">128/82</div><div class="vl">BLOOD PRESS.</div></div>
+            <div class="vcard"><div class="vv g" id="v_spo2">97%</div><div class="vl">SpO₂</div></div>
+            <div class="vcard"><div class="vv a" id="v_ef">42%</div><div class="vl">EJECTION FRAC.</div></div>
+            <div class="vcard"><div class="vv" id="v_temp">36.8°</div><div class="vl">TEMP</div></div>
+            <div class="vcard"><div class="vv r" id="v_rr">16</div><div class="vl">RESP RATE</div></div>
+          </div></div>
+          <div class="ecg-wrap">
+            <div class="ecg-l">ECG — LEAD II (LIVE)</div>
+            <canvas id="ecgCv" height="40" style="width:100%;display:block"></canvas>
+          </div>
+          <div class="sh">Upload Scans</div>
+          <div class="upload-zone" onclick="document.getElementById('scanUpload').click()">
+            <div class="uz-icon">📁</div>
+            <div class="uz-txt">DROP DICOM / IMAGE FILES</div>
+            <input type="file" id="scanUpload" multiple accept=".dcm,.png,.jpg,.jpeg" onchange="handleUpload(this)">
+          </div>
+          <div class="sb" style="padding-top:0">
+            <div class="scan-grid">
+              <div class="scan-card alert"><canvas id="sc1"></canvas><div class="scan-ol"><span class="scan-type">CT CHEST</span><span class="scan-flag">⚠</span></div></div>
+              <div class="scan-card"><canvas id="sc2"></canvas><div class="scan-ol"><span class="scan-type">CARDIAC MRI</span></div></div>
+              <div class="scan-card"><canvas id="sc3"></canvas><div class="scan-ol"><span class="scan-type">ANGIOGRAPHY</span></div></div>
+              <div class="scan-card"><canvas id="sc4"></canvas><div class="scan-ol"><span class="scan-type">X-RAY</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="sh">AI Anomaly Findings</div>
+          <div class="sb">
+            <div class="finding"><div class="fdot" style="background:var(--r)"></div><div class="ft"><strong>LAD Proximal Stenosis — 78% Blockage</strong>Critical narrowing in Left Anterior Descending artery. Immediate revascularization required. LIMA-to-LAD bypass is primary target. Digital twin has precisely mapped the stenosis location.</div></div>
+            <div class="finding"><div class="fdot" style="background:var(--a)"></div><div class="ft"><strong>Calcified Aortic Root</strong>Moderate calcification at aortic root. Cross-clamp site must be selected proximal to calcium deposits. Risk of embolization if clamped incorrectly.</div></div>
+            <div class="finding"><div class="fdot" style="background:var(--a)"></div><div class="ft"><strong>RCA Mid-Vessel Stenosis — 45%</strong>Right Coronary Artery moderate disease. Included in triple bypass plan. Distal anastomosis site mapped in digital twin.</div></div>
+            <div class="finding"><div class="fdot" style="background:var(--c)"></div><div class="ft"><strong>Anomalous OM Branch — Rare Variant</strong>Accessory obtuse marginal branch arises 2cm proximal to normal origin. Would have been a surgical surprise. Digital twin fully mapped this variant.</div></div>
+            <div class="finding"><div class="fdot" style="background:var(--g)"></div><div class="ft"><strong>LIMA Patent — Excellent Graft Candidate</strong>Left Internal Mammary Artery 100% patent, 3.2mm diameter. Ideal for LAD bypass. Superior long-term patency vs vein grafts.</div></div>
+          </div>
+          <div class="sh">Risk Analysis</div>
+          <div class="sb">
+            <div class="risk-item"><div class="risk-row"><span>Cardiac Mortality Risk</span><span style="color:var(--r)">HIGH — 34%</span></div><div class="risk-tr"><div class="risk-bar" style="width:34%;background:var(--r)"></div></div></div>
+            <div class="risk-item"><div class="risk-row"><span>Intraoperative Bleeding</span><span style="color:var(--a)">MEDIUM — 22%</span></div><div class="risk-tr"><div class="risk-bar" style="width:22%;background:var(--a)"></div></div></div>
+            <div class="risk-item"><div class="risk-row"><span>Neurological Complication</span><span style="color:var(--a)">LOW-MED — 12%</span></div><div class="risk-tr"><div class="risk-bar" style="width:12%;background:var(--a)"></div></div></div>
+            <div class="risk-item"><div class="risk-row"><span>Post-op Infection</span><span style="color:var(--g)">LOW — 7%</span></div><div class="risk-tr"><div class="risk-bar" style="width:7%;background:var(--g)"></div></div></div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="sh">Surgeon Readiness</div>
+          <div class="rring-wrap">
+            <div class="rring">
+              <svg width="110" height="110" viewBox="0 0 110 110"><circle cx="55" cy="55" r="48" fill="none" stroke="var(--b1)" stroke-width="5"/><circle id="rRingCircle" cx="55" cy="55" r="48" fill="none" stroke="var(--g)" stroke-width="5" stroke-dasharray="301.6" stroke-dashoffset="301.6" stroke-linecap="round" style="transition:stroke-dashoffset 1s ease"/></svg>
+              <div><div class="rring-val" id="readyPct">0%</div><div class="rring-lbl">READY</div></div>
+            </div>
+            <div style="font-size:10px;color:var(--t3);text-align:center;letter-spacing:1px">10 simulations needed for OR clearance</div>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;justify-content:space-between;font-size:11px"><span>Simulations Run</span><span style="font-family:'Share Tech Mono',monospace;color:var(--c)" id="rdSims">0 / 10</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px"><span>Best Score</span><span style="font-family:'Share Tech Mono',monospace;color:var(--g)" id="rdBest">—</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px"><span>Total Errors</span><span style="font-family:'Share Tech Mono',monospace;color:var(--r)" id="rdErr">0</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px"><span>OR Status</span><span style="font-family:'Share Tech Mono',monospace;color:var(--a)" id="rdStatus">PENDING</span></div>
+            </div>
+          </div>
+          <div class="sh">Digital Twin Status</div>
+          <div class="sb">
+            <table class="itbl">
+              <tr><td>Model Fidelity</td><td style="color:var(--g)">99.2%</td></tr>
+              <tr><td>Scans Loaded</td><td style="color:var(--c)">4/4</td></tr>
+              <tr><td>AI Findings</td><td style="color:var(--a)">5 detected</td></tr>
+              <tr><td>Anomalies</td><td><span class="tag tc">2 critical</span></td></tr>
+              <tr><td>Physics Engine</td><td><span class="tag tok">ACTIVE</span></td></tr>
+              <tr><td>Twin Sync</td><td><span class="tag tok">LIVE ●</span></td></tr>
+            </table>
+          </div>
+          <div class="sh">Pre-Op Checklist</div>
+          <div class="sb" id="checklist"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB 1: 3D TWIN ══ -->
+    <div class="screen" id="s1">
+      <div class="twin-layout">
+        <div class="col">
+          <div class="sh">Anatomy Map</div>
+          <div class="organ-btn crit sel" id="ob_lv" onclick="selOrgan('lv',this)">
+            <div class="ob-h"><span class="ob-n">Left Ventricle</span><span style="font-size:16px">🫀</span></div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--a)">EF: 42% (Low)</div>
+            <div class="ob-bar"><div class="ob-fill" style="width:42%;background:var(--a)"></div></div>
+          </div>
+          <div class="organ-btn crit" id="ob_lad" onclick="selOrgan('lad',this)">
+            <div class="ob-h"><span class="ob-n">LAD Artery</span><span style="font-size:16px">🩸</span></div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--r)">Stenosis: 78% ⚠</div>
+            <div class="ob-bar"><div class="ob-fill" style="width:78%;background:var(--r)"></div></div>
+          </div>
+          <div class="organ-btn" id="ob_rca" onclick="selOrgan('rca',this)">
+            <div class="ob-h"><span class="ob-n">RCA</span><span style="font-size:16px">〰️</span></div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--a)">Stenosis: 45%</div>
+            <div class="ob-bar"><div class="ob-fill" style="width:45%;background:var(--a)"></div></div>
+          </div>
+          <div class="organ-btn" id="ob_cx" onclick="selOrgan('cx',this)">
+            <div class="ob-h"><span class="ob-n">Cx Artery</span><span style="font-size:16px">🔬</span></div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--g)">Stenosis: 12%</div>
+            <div class="ob-bar"><div class="ob-fill" style="width:12%;background:var(--g)"></div></div>
+          </div>
+          <div class="organ-btn" id="ob_lima" onclick="selOrgan('lima',this)">
+            <div class="ob-h"><span class="ob-n">LIMA Graft</span><span style="font-size:16px">✂️</span></div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--g)">Patent: 100%</div>
+            <div class="ob-bar"><div class="ob-fill" style="width:100%;background:var(--g)"></div></div>
+          </div>
+          <div class="organ-btn" id="ob_aorta" onclick="selOrgan('aorta',this)">
+            <div class="ob-h"><span class="ob-n">Aorta</span><span style="font-size:16px">🫁</span></div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--a)">Calcification: mod</div>
+            <div class="ob-bar"><div class="ob-fill" style="width:35%;background:var(--a)"></div></div>
+          </div>
+        </div>
+        <div class="twin-vp">
+          <canvas id="twinCanvas"></canvas>
+          <div class="twin-hud">
+            <div class="hud-t">DIGITAL TWIN — LIVE SYNC</div>
+            <div class="hud-t w" id="hudAnom">⚠ LAD STENOSIS 78% — CRITICAL</div>
+            <div class="hud-t ok" id="hudSel">SELECTED: LEFT VENTRICLE</div>
+          </div>
+          <div class="twin-ctrl">
+            <button class="cbtn" onclick="setTView('full')">FULL</button>
+            <button class="cbtn" onclick="setTView('heart')">HEART</button>
+            <button class="cbtn" onclick="setTView('vessels')">VESSELS</button>
+            <button class="cbtn on" id="wireBtn" onclick="togWire()">WIRE</button>
+            <button class="cbtn" onclick="togSkin()">SKIN</button>
+          </div>
+          <div class="cdeco tl"></div><div class="cdeco tr"></div>
+          <div class="cdeco bl"></div><div class="cdeco br"></div>
+        </div>
+        <div class="col">
+          <div class="sh">Selected Anatomy</div>
+          <div class="detail-box">
+            <h4 id="od_name">LEFT VENTRICLE</h4>
+            <div class="dr"><span>Function</span><span id="od_fn">42% EF</span></div>
+            <div class="dr"><span>Wall Motion</span><span id="od_wm">Hypokinetic</span></div>
+            <div class="dr"><span>Volume (ED)</span><span id="od_edv">180 mL</span></div>
+            <div class="dr"><span>Status</span><span id="od_st" style="color:var(--a)">IMPAIRED</span></div>
+          </div>
+          <div class="detail-box" style="margin-top:8px">
+            <h4>SURGICAL NOTES</h4>
+            <div style="font-size:11px;color:var(--t3);line-height:1.7" id="od_notes">Reduced EF due to chronic ischemia from LAD territory. Post-revascularization improvement expected to 50-55% EF. LIMA-to-LAD bypass is primary target.</div>
+          </div>
+          <div class="detail-box" style="margin-top:8px">
+            <h4>3D CONTROLS</h4>
+            <div style="font-size:10px;color:var(--t3);line-height:2">
+              🖱 <strong style="color:var(--t)">Drag</strong> — Rotate model<br>
+              🖱 <strong style="color:var(--t)">Scroll</strong> — Zoom in/out<br>
+              👆 <strong style="color:var(--t)">Click organ</strong> — Select & inspect<br>
+              📐 <strong style="color:var(--t)">WIRE</strong> — See through body
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB 2: SURGERY SIM ══ -->
+    <div class="screen" id="s2">
+      <div class="sim-layout">
+        <div class="sim-left">
+          <div class="sh">Surgical Tools</div>
+          <div class="tbtn sel" id="tb_scalpel" onclick="selTool('scalpel',this)"><div class="ti">🔪</div><div><div class="t-name">Scalpel</div><div class="t-desc">Incision & dissection</div></div></div>
+          <div class="tbtn" id="tb_cannula" onclick="selTool('cannula',this)"><div class="ti">💉</div><div><div class="t-name">Cannula</div><div class="t-desc">CPB cannulation</div></div></div>
+          <div class="tbtn" id="tb_suture" onclick="selTool('suture',this)"><div class="ti">🧵</div><div><div class="t-name">Suture</div><div class="t-desc">Anastomosis & closure</div></div></div>
+          <div class="tbtn" id="tb_clamp" onclick="selTool('clamp',this)"><div class="ti">🗜️</div><div><div class="t-name">Aortic Clamp</div><div class="t-desc">Cross-clamp aorta</div></div></div>
+          <div class="tbtn" id="tb_cautery" onclick="selTool('cautery',this)"><div class="ti">⚡</div><div><div class="t-name">Electrocautery</div><div class="t-desc">Hemostasis</div></div></div>
+          <div class="tbtn" id="tb_forceps" onclick="selTool('forceps',this)"><div class="ti">🩺</div><div><div class="t-name">Forceps</div><div class="t-desc">Tissue handling</div></div></div>
+          <div class="sh" style="margin-top:4px">Current Step</div>
+          <div style="padding:11px;font-size:11px;color:var(--t3);line-height:1.7" id="stepInfo">
+            Press <strong style="color:var(--c)">START SIMULATION</strong> to begin surgery on the Digital Twin.<br><br>
+            🖱 <strong style="color:var(--t)">Click the highlighted organs</strong> with the correct tool to proceed.
+          </div>
+          <div class="sh" style="margin-top:4px">Complications</div>
+          <div class="compl w" id="cwarn"><div class="compl-h" style="color:var(--a)">⚠ CAUTION</div><div class="compl-b" id="cwarnTxt">Anomalous vessel detected. Proceed carefully.</div></div>
+          <div class="compl r" id="ccrit"><div class="compl-h" style="color:var(--r)">🚨 COMPLICATION</div><div class="compl-b" id="ccritTxt">Anastomosis leak. Additional suture required.</div></div>
+        </div>
+
+        <div class="sim-center">
+          <canvas id="simCanvas"></canvas>
+          <div class="sim-hud">
+            <div class="sim-steps" id="simStepTracker">
+              <div class="ss act" id="st0">1</div><div class="ss-line"></div>
+              <div class="ss" id="st1">2</div><div class="ss-line"></div>
+              <div class="ss" id="st2">3</div><div class="ss-line"></div>
+              <div class="ss" id="st3">4</div><div class="ss-line"></div>
+              <div class="ss" id="st4">5</div><div class="ss-line"></div>
+              <div class="ss" id="st5">6</div><div class="ss-line"></div>
+              <div class="ss" id="st6">7</div><div class="ss-line"></div>
+              <div class="ss" id="st7">8</div><div class="ss-line"></div>
+              <div class="ss" id="st8">9</div><div class="ss-line"></div>
+              <div class="ss" id="st9">10</div>
+            </div>
+            <div class="sim-stats">
+              <div class="sstat"><div class="sstat-v" id="sbTimer">00:00</div><div class="sstat-l">ELAPSED</div></div>
+              <div class="sstat"><div class="sstat-v g" id="sbAcc">—</div><div class="sstat-l">ACCURACY</div></div>
+              <div class="sstat"><div class="sstat-v r" id="sbErr">0</div><div class="sstat-l">ERRORS</div></div>
+            </div>
+          </div>
+          <div class="sim-feedback"><div class="sf-msg" id="sfMsg" style="color:var(--g)">CORRECT</div></div>
+          <div class="hint-tag" id="hintTag" style="display:none"></div>
+          <div class="sim-bar-wrap">
+            <div class="sb-row"><span>PROCEDURE PROGRESS</span><span id="simPct">0%</span></div>
+            <div class="sb-track"><div class="sb-fill" id="simFill" style="width:0%"></div></div>
+          </div>
+          <div class="sim-ctrls">
+            <button class="scbtn p" id="simBtn" onclick="handleSimBtn()">▶ START SIMULATION</button>
+            <button class="scbtn d" onclick="resetSim()">↺ RESET</button>
+          </div>
+        </div>
+
+        <div class="sim-right">
+          <div class="sh">AI Mentor Feedback</div>
+          <div class="ai-loading" id="aiLoad"><div class="ai-spinner"></div><span>Claude analyzing your technique...</span></div>
+          <div class="ai-msg ok" id="aiMsg"></div>
+          <div class="sh" style="margin-top:4px">Score</div>
+          <div class="score-ring" style="width:90px;height:90px;margin:10px auto">
+            <svg width="90" height="90" viewBox="0 0 90 90"><circle cx="45" cy="45" r="38" fill="none" stroke="var(--b1)" stroke-width="5"/><circle id="srCircle" cx="45" cy="45" r="38" fill="none" stroke="var(--g)" stroke-width="5" stroke-dasharray="238.8" stroke-dashoffset="238.8" stroke-linecap="round" style="transition:.8s ease"/></svg>
+            <div><div class="sr-v" id="srVal">—</div><div class="sr-l">SCORE</div></div>
+          </div>
+          <div style="padding:0 10px">
+            <table class="itbl">
+              <tr><td>Simulations</td><td style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--c)" id="stSims">0</td></tr>
+              <tr><td>Best Score</td><td style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--g)" id="stBest">—</td></tr>
+              <tr><td>Total Errors</td><td style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--r)" id="stErr">0</td></tr>
+              <tr><td>Avg Duration</td><td style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--a)" id="stDur">—</td></tr>
+              <tr><td>OR Clearance</td><td style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--a)" id="stClear">PENDING</td></tr>
+            </table>
+          </div>
+          <div class="sh" style="margin-top:4px">AI Feedback Log</div>
+          <div class="ai-history" id="aiHistory"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB 3: LEADERBOARD ══ -->
+    <div class="screen" id="s3">
+      <div class="lb-layout">
+        <div class="lb-main">
+          <div class="lb-head">
+            <div><div class="lb-title">GLOBAL LEADERBOARD</div><div class="lb-sub">SURGTWIN SURGEONS WORLDWIDE</div></div>
+            <button class="lb-refresh" onclick="loadLB()">↻ REFRESH</button>
+          </div>
+          <table class="lb-table">
+            <thead><tr><th>Rank</th><th>Surgeon</th><th>Best Score</th><th>Sims</th><th>Errors</th><th>Date</th></tr></thead>
+            <tbody id="lbBody"><tr><td colspan="6" style="text-align:center;color:var(--t3);padding:30px;font-size:12px">Loading leaderboard...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="lb-side">
+          <div class="your-score" id="yourScoreBox" style="display:none">
+            <h4>YOUR BEST SCORE</h4>
+            <div class="ys-row"><span>Score</span><span id="ysScore">—</span></div>
+            <div class="ys-row"><span>Simulations</span><span id="ySims">—</span></div>
+            <div class="ys-row"><span>Total Errors</span><span id="yErr">—</span></div>
+          </div>
+          <div class="score-submit">
+            <h3>SUBMIT SCORE</h3>
+            <div class="no-score-msg" id="noScoreMsg">Complete at least 1 simulation in Surgery Sim to submit your score to the global leaderboard.</div>
+            <div id="submitForm" style="display:none;flex-direction:column;gap:8px">
+              <div style="font-size:11px;color:var(--t3);letter-spacing:1px">Enter your surgeon name:</div>
+              <input class="s-input" id="surgeonName" placeholder="Dr. YourName" maxlength="30">
+              <button class="s-submit" onclick="submitScore()">🏆 SUBMIT TO LEADERBOARD</button>
+            </div>
+          </div>
+          <div style="margin-top:8px">
+            <div style="font-size:10px;color:var(--t3);letter-spacing:1px;margin-bottom:8px;font-family:'Share Tech Mono',monospace">HOW SCORING WORKS</div>
+            <div style="font-size:11px;color:var(--t3);line-height:1.8">
+              • Each simulation scored 0-100<br>
+              • Accuracy improves with practice<br>
+              • Errors reduce final score<br>
+              • Speed bonus for faster procedures<br>
+              • 10 sims = OR clearance achieved
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB 4: AI REPORT ══ -->
+    <div class="screen" id="s4">
+      <div class="rep-layout">
+        <div class="rep-inner">
+          <div class="rep-hdr">
+            <div><div class="rep-logo">SURG<em>TWIN</em></div><div style="font-size:10px;color:var(--t3);letter-spacing:2px;margin-top:3px">SURGICAL READINESS REPORT</div></div>
+            <div style="text-align:right;font-size:11px;color:var(--t3)">
+              Patient: <strong style="color:var(--w)">Rahul Sharma</strong><br>
+              PID: PID-2024-XR7491<br>
+              Procedure: CABG × 3<br>
+              <span id="repDate">—</span>
+            </div>
+          </div>
+
+          <div class="ready-banner rb-pend" id="readyBanner">
+            <div class="rb-title" style="color:var(--r)" id="rbTitle">⏳ SIMULATIONS PENDING</div>
+            <div class="rb-sub" id="rbSub">Complete 10 surgical simulations to achieve OR clearance</div>
+          </div>
+
+          <div class="rep-sec">
+            <h3>Performance Summary</h3>
+            <div class="rep-grid">
+              <div class="rc"><div class="rc-v" id="rSims">0</div><div class="rc-l">Simulations</div></div>
+              <div class="rc"><div class="rc-v g" id="rAcc">—</div><div class="rc-l">Best Accuracy</div></div>
+              <div class="rc"><div class="rc-v a" id="rDur">—</div><div class="rc-l">Avg Duration</div></div>
+              <div class="rc"><div class="rc-v r" id="rErr">0</div><div class="rc-l">Total Errors</div></div>
+            </div>
+          </div>
+
+          <div class="rep-sec">
+            <h3>AI-Detected Anomalies</h3>
+            <div class="anom-list">
+              <div class="anom"><div class="anom-sev" style="background:var(--r)"></div><div class="anom-b"><h4>LAD Proximal Stenosis — 78%</h4><p>Critical blockage in Left Anterior Descending artery. Digital twin simulation has helped surgeon rehearse LIMA-to-LAD bypass in precise patient-specific anatomy. This "surprise" would have been discovered only in OR with 2D-only planning.</p></div></div>
+              <div class="anom"><div class="anom-sev" style="background:var(--a)"></div><div class="anom-b"><h4>Anomalous OM Branch — Rare Variant</h4><p>Accessory obtuse marginal branch arising 2cm proximal to normal origin. Mapped in digital twin before surgery, eliminating the risk of inadvertent injury during dissection.</p></div></div>
+              <div class="anom"><div class="anom-sev" style="background:var(--a)"></div><div class="anom-b"><h4>Aortic Root Calcification</h4><p>Moderate calcium deposits require careful cross-clamp site selection. Digital twin simulation allowed surgeon to practice safe clamping on this specific anatomy.</p></div></div>
+            </div>
+          </div>
+
+          <div class="rep-sec">
+            <h3>AI-Generated Surgical Assessment</h3>
+            <div class="rep-ai-spinner" id="repAiSpin"><div class="r-spinner"></div><span>Claude is generating your personalized surgical assessment...</span></div>
+            <div class="ai-rep-content loading" id="repAiContent">Click "Generate AI Assessment" to get a personalized analysis of your surgical performance and readiness.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="rep-btn gen-btn" onclick="generateReport()">🤖 Generate AI Assessment</button>
+              <button class="rep-btn" onclick="window.print()">🖨️ Export Report</button>
+            </div>
+          </div>
+
+          <div class="rep-sec">
+            <h3>Digital Twin vs Traditional Approach</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div style="background:var(--bg3);border:1px solid var(--b1);border-radius:3px;padding:14px">
+                <div style="font-size:10px;letter-spacing:2px;color:var(--r);margin-bottom:8px">❌ TRADITIONAL (2D ONLY)</div>
+                <div style="font-size:11px;color:var(--t3);line-height:1.8">• 2D X-ray / MRI only<br>• Surprises in OR<br>• No practice possible<br>• Variants unknown<br>• Higher error rate</div>
+              </div>
+              <div style="background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.2);border-radius:3px;padding:14px">
+                <div style="font-size:10px;letter-spacing:2px;color:var(--g);margin-bottom:8px">✅ DIGITAL TWIN (THIS SYSTEM)</div>
+                <div style="font-size:11px;color:var(--t3);line-height:1.8">• Full 3D patient model<br>• All anomalies pre-mapped<br>• 10+ rehearsal runs<br>• Zero surprise anatomy<br>• Errors approach zero</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="mTitle">✓ SIMULATION COMPLETE</h3>
+    <div class="mrow"><span>Score</span><span id="mScore">—</span></div>
+    <div class="mrow"><span>Duration</span><span id="mDur">—</span></div>
+    <div class="mrow"><span>Errors</span><span id="mErr">—</span></div>
+    <div class="mrow"><span>Total Sims</span><span id="mSims">—</span></div>
+    <div class="mrow" id="mClearRow" style="display:none"><span>OR Status</span><span style="color:var(--g)">CLEARED ✓</span></div>
+    <button class="mclose" onclick="closeModal()">CLOSE</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+const S = {
+  simCount:0, bestScore:0, totalErrors:0, totalDur:0,
+  scores:[], simRunning:false, simStep:0, simElapsed:0,
+  simInt:null, tool:'scalpel', voiceOn:false,
+  clicksThisStep:0, errorsThisStep:0, simPhase:'idle',
+  pendingStepComplete:false
+};
+
+// ═══════════════════════════════════════════════════
+//  SURGERY STEPS DEFINITION
+// ═══════════════════════════════════════════════════
+const STEPS = [
+  {title:'Median Sternotomy',     desc:'Chest wall incision, sternal saw, enter thoracic cavity', tool:'scalpel',  zone:'chest',    icon:'🔪'},
+  {title:'Cardiopulmonary Bypass',desc:'Place aortic & venous cannulas, connect CPB machine',     tool:'cannula',  zone:'aorta',    icon:'💉'},
+  {title:'Cardioplegia Arrest',   desc:'Inject cardioplegia, cool heart, achieve cardiac arrest',  tool:'cannula',  zone:'heart',    icon:'💉'},
+  {title:'LIMA Graft Harvest',    desc:'Harvest Left Internal Mammary Artery from chest wall',     tool:'scalpel',  zone:'lima',     icon:'🔪'},
+  {title:'Proximal Anastomosis',  desc:'Sew saphenous vein graft to ascending aorta (×2)',         tool:'suture',   zone:'aorta',    icon:'🧵'},
+  {title:'LAD Distal Anastomosis',desc:'Sew LIMA graft to LAD artery beyond stenosis',             tool:'suture',   zone:'lad',      icon:'🧵'},
+  {title:'RCA Distal Anastomosis',desc:'Sew vein graft to right coronary artery',                  tool:'suture',   zone:'rca',      icon:'🧵'},
+  {title:'Cx Distal Anastomosis', desc:'Sew vein graft to Cx artery at mapped site',               tool:'suture',   zone:'cx',       icon:'🧵'},
+  {title:'Weaning & De-air',      desc:'Release aortic clamp, restart heart, wean CPB',            tool:'clamp',    zone:'aorta',    icon:'🗜️'},
+  {title:'Sternal Closure',       desc:'Sternal wires placed, chest closed, drains inserted',      tool:'suture',   zone:'chest',    icon:'🧵'},
+];
+
+// ═══════════════════════════════════════════════════
+//  SPLASH
+// ═══════════════════════════════════════════════════
+const SMSG = ['INITIALIZING NEURAL MESH...','LOADING PATIENT SCANS...','CT/MRI DATA PROCESSING...','BUILDING 3D TOPOLOGY...','MAPPING VASCULAR TREE...','AI ANOMALY DETECTION...','CALIBRATING PHYSICS ENGINE...','SYNCING DIGITAL TWIN...','AI MENTOR LOADED...','SYSTEM READY'];
+let sP=0;
+const sInt=setInterval(()=>{
+  sP+=100/(SMSG.length*5);
+  document.getElementById('sBar').style.width=Math.min(sP,100)+'%';
+  document.getElementById('sStatus').textContent=SMSG[Math.min(Math.floor(sP/(100/SMSG.length)),SMSG.length-1)];
+  if(sP>=100){
+    clearInterval(sInt);
+    setTimeout(()=>{
+      const sp=document.getElementById('splash');
+      sp.style.transition='opacity .6s';sp.style.opacity='0';
+      setTimeout(()=>{sp.style.display='none';document.getElementById('app').classList.add('on');initApp();},600);
+    },300);
+  }
+},60);
+
+// ═══════════════════════════════════════════════════
+//  APP INIT
+// ═══════════════════════════════════════════════════
+function initApp(){
+  initClock(); initVitals(); initECG(); initScans();
+  initChecklist(); initTwin3D(); initSimCanvas();
+  loadLB();
+  document.getElementById('repDate').textContent=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  speak('Welcome to SurgTwin. Digital twin synchronized. Patient Rahul Sharma, CABG triple bypass, LAD stenosis 78 percent critical. Proceed to Surgery Simulation to begin.');
+}
+
+// ═══════════════════════════════════════════════════
+//  CLOCK + VITALS
+// ═══════════════════════════════════════════════════
+function initClock(){
+  const tick=()=>{const n=new Date();document.getElementById('tbClock').textContent=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;};
+  tick();setInterval(tick,1000);
+}
+function initVitals(){
+  const u=()=>{
+    const hr=72+Math.round((Math.random()-.5)*8);
+    const s=96+Math.round(Math.random()*2);
+    const ef=42+Math.round((Math.random()-.5)*2);
+    const rr=14+Math.round(Math.random()*4);
+    document.getElementById('v_hr').textContent=hr;document.getElementById('v_spo2').textContent=s+'%';
+    document.getElementById('v_ef').textContent=ef+'%';document.getElementById('v_rr').textContent=rr;
+    document.getElementById('v_temp').textContent=(36.5+Math.random()*.5).toFixed(1)+'°';
+    document.getElementById('tbHr').textContent=hr;document.getElementById('tbBp').textContent='128/82';
+    document.getElementById('tbSpo').textContent=s+'%';document.getElementById('tbEf').textContent=ef+'%';
+  };
+  u();setInterval(u,2800);
+}
+
+// ═══════════════════════════════════════════════════
+//  ECG
+// ═══════════════════════════════════════════════════
+function initECG(){
+  const cv=document.getElementById('ecgCv');
+  const ctx=cv.getContext('2d');
+  let data=[],t=0;
+  const resize=()=>{cv.width=cv.parentElement.clientWidth||220;cv.height=40;};
+  resize();window.addEventListener('resize',resize);
+  const wave=t=>{
+    const p=t%(Math.PI*2);
+    if(p<.25)return Math.sin(p*18)*.22;
+    if(p<.5)return 0;
+    if(p<.62)return Math.sin((p-.5)*80)*1.9;
+    if(p<.82)return -Math.sin((p-.62)*35)*.55;
+    if(p<1.3)return Math.sin((p-.82)*12)*.35;
+    return 0;
+  };
+  setInterval(()=>{
+    t+=.14;data.push(wave(t));
+    if(data.length>cv.width)data.shift();
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.strokeStyle='#ff2d55';ctx.lineWidth=1.5;ctx.shadowColor='#ff2d55';ctx.shadowBlur=4;
+    ctx.beginPath();data.forEach((v,i)=>{i===0?ctx.moveTo(i,cv.height/2-v*13):ctx.lineTo(i,cv.height/2-v*13);});ctx.stroke();
+  },28);
+}
+
+// ═══════════════════════════════════════════════════
+//  SCANS
+// ═══════════════════════════════════════════════════
+function initScans(){setTimeout(()=>{drawScan('sc1','ct');drawScan('sc2','mri');drawScan('sc3','angio');drawScan('sc4','xray');},120);}
+function drawScan(id,type){
+  const card=document.getElementById(id);if(!card)return;
+  const cv=card;const p=cv.parentElement;cv.width=p.offsetWidth||90;cv.height=p.offsetHeight||90;
+  const c=cv.getContext('2d');const w=cv.width,h=cv.height;
+  c.fillStyle='#000';c.fillRect(0,0,w,h);
+  if(type==='ct'){
+    const g=c.createRadialGradient(w/2,h/2,3,w/2,h/2,w/2);g.addColorStop(0,'#1e3a52');g.addColorStop(.5,'#0a1c2a');g.addColorStop(1,'#000');
+    c.fillStyle=g;c.fillRect(0,0,w,h);
+    c.strokeStyle='rgba(30,80,120,.5)';c.lineWidth=.5;
+    for(let i=0;i<10;i++){c.beginPath();c.arc(w/2,h/2,4+i*5,0,Math.PI*2);c.stroke();}
+    c.fillStyle='#1a2d3e';c.beginPath();c.ellipse(w/2-2,h/2-4,w*.28,h*.34,.1,0,Math.PI*2);c.fill();
+    c.fillStyle='#2a3d50';c.beginPath();c.ellipse(w/2+8,h/2+2,w*.18,h*.22,-.1,0,Math.PI*2);c.fill();
+    c.strokeStyle='rgba(255,45,85,.7)';c.lineWidth=1.5;c.beginPath();c.arc(w/2-6,h/2-2,8,0,Math.PI*2);c.stroke();
+    c.fillStyle='rgba(255,45,85,.15)';c.beginPath();c.arc(w/2-6,h/2-2,8,0,Math.PI*2);c.fill();
+  }else if(type==='mri'){
+    c.fillStyle='#030510';c.fillRect(0,0,w,h);
+    for(let i=0;i<8;i++){c.fillStyle=`rgba(${20+i*12},${30+i*10},${50+i*10},.7)`;c.beginPath();c.ellipse(w/2+(i%3-1)*6,h/2+(i%2)*4-2,w/2-i*3,h/2-i*2.5,i*.2,0,Math.PI*2);c.fill();}
+    c.strokeStyle='rgba(0,180,220,.4)';c.lineWidth=.5;for(let i=0;i<5;i++){c.beginPath();c.arc(w/2,h/2,i*8+4,0,Math.PI*2);c.stroke();}
+  }else if(type==='angio'){
+    c.fillStyle='#000508';c.fillRect(0,0,w,h);
+    [{x:w/2,col:'rgba(220,30,50,.9)',lw:1.5},{x:w/2+10,col:'rgba(180,20,35,.6)',lw:1},{x:w/2-8,col:'rgba(160,15,30,.5)',lw:.8}].forEach(v=>{
+      c.strokeStyle=v.col;c.lineWidth=v.lw;c.beginPath();c.moveTo(v.x,2);
+      for(let i=0;i<h-4;i+=2)c.lineTo(v.x+Math.sin(i*.18+v.x)*12+(Math.random()-.5)*2,2+i);
+      c.stroke();
+    });
+    c.fillStyle='rgba(255,45,85,.2)';c.strokeStyle='rgba(255,45,85,.8)';c.lineWidth=1;c.fillRect(w/2-12,h*.35,24,12);c.strokeRect(w/2-12,h*.35,24,12);
+  }else{
+    c.fillStyle='#050810';c.fillRect(0,0,w,h);
+    c.strokeStyle='rgba(160,190,210,.5)';c.lineWidth=.8;
+    for(let i=0;i<5;i++){c.beginPath();c.arc(w/2,h*.25+i*12,w*.38,.2,Math.PI-.2);c.stroke();}
+    c.strokeStyle='rgba(180,200,215,.6)';c.lineWidth=1.2;c.beginPath();c.moveTo(w/2,h*.1);
+    for(let i=0;i<h*.75;i+=3)c.lineTo(w/2+(Math.random()-.5)*1.5,h*.1+i);c.stroke();
+    c.fillStyle='rgba(60,80,100,.4)';c.beginPath();c.ellipse(w/2-3,h*.4,w*.16,h*.18,.2,0,Math.PI*2);c.fill();
+  }
+}
+function handleUpload(inp){
+  const files=[...inp.files];
+  const ids=['sc1','sc2','sc3','sc4'];
+  files.forEach((f,i)=>{
+    if(i>=4)return;
+    const r=new FileReader();
+    r.onload=e=>{
+      const cv=document.getElementById(ids[i]);
+      const img=new Image();img.onload=()=>{
+        cv.width=cv.parentElement.offsetWidth||90;cv.height=cv.parentElement.offsetHeight||90;
+        const ctx=cv.getContext('2d');
+        ctx.filter='grayscale(1) brightness(.7) contrast(1.3)';
+        ctx.drawImage(img,0,0,cv.width,cv.height);
+        ctx.filter='none';
+      };img.src=e.target.result;
+    };r.readAsDataURL(f);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  CHECKLIST
+// ═══════════════════════════════════════════════════
+const CHECKS=[['Informed consent','ok'],['NPO > 8 hours','ok'],['Blood group & cross','ok'],['Anesthesia consult','ok'],['Cardiology clearance','ok'],['All scans reviewed','ok'],['3D twin built','ok'],['Simulation ≥ 10x','pending'],['OR team briefed','pending'],['Equipment verified','pending']];
+function initChecklist(){renderChecklist();}
+function renderChecklist(){
+  const el=document.getElementById('checklist');if(!el)return;
+  const items=CHECKS.map(([l,s],i)=>{
+    const st=i===7&&S.simCount>=10?'ok':i>7&&S.simCount>=10?'ok':s;
+    return `<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(14,42,66,.3)"><span>${l}</span><span class="tag ${st==='ok'?'tok':'tw'}">${st==='ok'?'✓ DONE':'PENDING'}</span></div>`;
+  });
+  el.innerHTML=items.join('');
+}
+
+// ═══════════════════════════════════════════════════
+//  TAB NAVIGATION
+// ═══════════════════════════════════════════════════
+function goTab(i,btn){
+  document.querySelectorAll('.nt').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('s'+i).classList.add('on');
+  if(i===1)resizeTwin();
+  if(i===2)resizeSim();
+  if(i===3)loadLB();
+  if(i===4)updateReport();
+}
+
+// ═══════════════════════════════════════════════════
+//  THREE.JS DIGITAL TWIN (upgraded PBR)
+// ═══════════════════════════════════════════════════
+let tRen,tScene,tCam,tGroup,tHeart,tLad,tLungs=[],tRibs=[],tSkin,tT=0;
+let tDrag=false,tLX=0,tLY=0,tRX=0,tRY=0;
+let wireOn=true,skinOn=true;
+
+function initTwin3D(){
+  const cv=document.getElementById('twinCanvas');
+  tRen=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+  tRen.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  tRen.shadowMap.enabled=true;
+  tScene=new THREE.Scene();tScene.background=new THREE.Color(0x010911);
+  tScene.fog=new THREE.FogExp2(0x010911,.06);
+  tCam=new THREE.PerspectiveCamera(45,1,.1,100);tCam.position.set(0,.2,5.5);
+
+  // Hemisphere light for ambient
+  tScene.add(new THREE.HemisphereLight(0x001a3a,0x000510,.8));
+  // Main surgical light
+  const ml=new THREE.SpotLight(0x00d4ff,2,20,Math.PI/6,.3);
+  ml.position.set(2,6,4);ml.castShadow=true;tScene.add(ml);
+  const ml2=new THREE.SpotLight(0xffffff,1.2,20,Math.PI/5,.2);
+  ml2.position.set(-3,5,3);tScene.add(ml2);
+  const rl=new THREE.PointLight(0xff2d55,.5,8);rl.position.set(-3,-2,-3);tScene.add(rl);
+  const gl=new THREE.PointLight(0x00ff88,.3,8);gl.position.set(0,-4,2);tScene.add(gl);
+  // OR overhead light simulation
+  const orl=new THREE.PointLight(0xffffff,.8,6);orl.position.set(0,4,1);tScene.add(orl);
+
+  tGroup=new THREE.Group();tScene.add(tGroup);
+
+  // Materials - MeshStandardMaterial for PBR
+  const skinMat=new THREE.MeshStandardMaterial({color:0x0a2040,transparent:true,opacity:.2,roughness:.7,metalness:0,side:THREE.DoubleSide});
+  const boneMat=new THREE.MeshStandardMaterial({color:0x2a4060,transparent:true,opacity:.55,roughness:.8,metalness:.1});
+  const lungMat=new THREE.MeshStandardMaterial({color:0x1a5878,transparent:true,opacity:.32,roughness:.6,metalness:0,side:THREE.DoubleSide});
+  const heartMat=new THREE.MeshStandardMaterial({color:0xff1e3a,emissive:0x660010,emissiveIntensity:.4,roughness:.4,metalness:.1});
+  const ladMat=new THREE.MeshStandardMaterial({color:0xff4400,emissive:0xff2200,emissiveIntensity:.5,roughness:.3,metalness:.1});
+  const vesselMat=new THREE.MeshStandardMaterial({color:0xcc1133,emissive:0x440010,emissiveIntensity:.3,roughness:.35,metalness:.1});
+  const aortaMat=new THREE.MeshStandardMaterial({color:0xdd1e40,emissive:0x550014,emissiveIntensity:.4,roughness:.3,metalness:.15});
+  const limaMat=new THREE.MeshStandardMaterial({color:0x00cc44,emissive:0x004411,emissiveIntensity:.3,roughness:.4,metalness:.1});
+
+  // Body
+  tSkin=new THREE.Mesh(new THREE.CylinderGeometry(.62,.57,2.1,40),skinMat);tGroup.add(tSkin);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.4,28,22),skinMat);head.position.y=1.45;tGroup.add(head);
+  // Neck
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,.28,20),skinMat);neck.position.y=1.12;tGroup.add(neck);
+
+  // Ribs (more detailed)
+  for(let i=0;i<8;i++){
+    const geo=new THREE.TorusGeometry(.53-i*.01,.012,10,28,Math.PI*1.35);
+    const rib=new THREE.Mesh(geo,boneMat);
+    rib.position.y=.58-i*.17;rib.rotation.x=Math.PI/2;rib.rotation.z=-.08;
+    tGroup.add(rib);tRibs.push(rib);
+  }
+  const sternGeo=new THREE.CylinderGeometry(.018,.018,1.4,10);
+  const stern=new THREE.Mesh(sternGeo,boneMat);stern.position.set(0,.12,.5);tGroup.add(stern);
+  // Spine
+  for(let i=0;i<12;i++){
+    const vb=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.06,8),boneMat);
+    vb.position.set(0,.6-i*.12,-.48);tGroup.add(vb);
+  }
+
+  // Lungs
+  const lGeo=new THREE.SphereGeometry(.3,22,18);
+  const lL=new THREE.Mesh(lGeo,lungMat);lL.scale.set(.7,1.35,.8);lL.position.set(-.24,.22,0);tGroup.add(lL);tLungs.push(lL);
+  const lR=new THREE.Mesh(lGeo.clone(),lungMat);lR.scale.set(.7,1.35,.8);lR.position.set(.24,.22,0);tGroup.add(lR);tLungs.push(lR);
+
+  // Heart (better shape)
+  const hGeo=new THREE.SphereGeometry(.22,28,22);
+  tHeart=new THREE.Mesh(hGeo,heartMat);tHeart.scale.set(.9,1.18,.82);tHeart.position.set(-.07,.09,.15);tGroup.add(tHeart);
+  // Pericardium hint
+  const periGeo=new THREE.SphereGeometry(.26,20,16);
+  const peri=new THREE.Mesh(periGeo,new THREE.MeshStandardMaterial({color:0xff4466,transparent:true,opacity:.08,roughness:1}));
+  peri.scale.set(.9,1.18,.82);peri.position.set(-.07,.09,.15);tGroup.add(peri);
+
+  // Aorta & arch
+  const aortaGeo=new THREE.CylinderGeometry(.046,.058,.48,14);
+  const aortaMesh=new THREE.Mesh(aortaGeo,aortaMat);aortaMesh.position.set(-.02,.36,.12);tGroup.add(aortaMesh);
+  const archCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(-.02,.6,.12),new THREE.Vector3(.1,.68,.1),new THREE.Vector3(.2,.58,.07)]);
+  tGroup.add(new THREE.Mesh(new THREE.TubeGeometry(archCurve,18,.032,10,false),aortaMat));
+  // Descending aorta
+  const descCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(.2,.58,.07),new THREE.Vector3(.18,.2,.05),new THREE.Vector3(.14,-.4,-.1)]);
+  tGroup.add(new THREE.Mesh(new THREE.TubeGeometry(descCurve,16,.025,10,false),aortaMat));
+
+  // LAD (critical, highlighted)
+  const ladPts=[];for(let i=0;i<16;i++){const t=i/15;ladPts.push(new THREE.Vector3(-.06+t*.03,.14-t*.36,.18-t*.07));}
+  tLad=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ladPts),28,.014,10,false),ladMat);tGroup.add(tLad);
+  // Stenosis marker
+  const sten=new THREE.Mesh(new THREE.SphereGeometry(.025,12,10),new THREE.MeshStandardMaterial({color:0xff3300,emissive:0xff1100,emissiveIntensity:.8,transparent:true,opacity:.9}));
+  sten.position.set(-.055,.04,.18);tGroup.add(sten);
+
+  // RCA
+  const rcaPts=[new THREE.Vector3(.08,.11,.16),new THREE.Vector3(.15,-.04,.13),new THREE.Vector3(.13,-.2,.08),new THREE.Vector3(.08,-.32,.05)];
+  tGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rcaPts),22,.011,8,false),vesselMat));
+  // Cx
+  const cxPts=[new THREE.Vector3(-.05,.07,.16),new THREE.Vector3(-.15,-.02,.15),new THREE.Vector3(-.19,-.14,.1),new THREE.Vector3(-.15,-.26,.06)];
+  tGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cxPts),18,.01,8,false),vesselMat));
+  // LIMA
+  const limaPts=[new THREE.Vector3(-.28,.5,.09),new THREE.Vector3(-.22,.32,.14),new THREE.Vector3(-.12,.12,.17),new THREE.Vector3(-.065,.04,.18)];
+  tGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(limaPts),18,.009,8,false),limaMat));
+  // Pulmonary vessels
+  const pvPts=[new THREE.Vector3(.06,.15,.16),new THREE.Vector3(.14,.3,.12),new THREE.Vector3(.1,.48,.08)];
+  tGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pvPts),12,.018,8,false),new THREE.MeshStandardMaterial({color:0x4488ff,emissive:0x112244,emissiveIntensity:.2,roughness:.5})));
+
+  // Grid
+  const grid=new THREE.GridHelper(8,28,0x0e2a42,0x040e1a);grid.position.y=-1.45;tScene.add(grid);
+
+  // Mouse controls
+  cv.addEventListener('mousedown',e=>{tDrag=true;tLX=e.clientX;tLY=e.clientY;});
+  window.addEventListener('mouseup',()=>tDrag=false);
+  window.addEventListener('mousemove',e=>{if(!tDrag)return;tRY+=(e.clientX-tLX)*.013;tRX+=(e.clientY-tLY)*.007;tRX=Math.max(-.9,Math.min(.9,tRX));tLX=e.clientX;tLY=e.clientY;});
+  cv.addEventListener('wheel',e=>{tCam.position.z=Math.max(2,Math.min(9,tCam.position.z+e.deltaY*.005));});
+
+  resizeTwin();animateTwin();
+}
+
+function resizeTwin(){
+  const vp=document.querySelector('.twin-vp');if(!vp||!tRen)return;
+  tRen.setSize(vp.clientWidth,vp.clientHeight,false);
+  tCam.aspect=vp.clientWidth/vp.clientHeight;tCam.updateProjectionMatrix();
+}
+
+function animateTwin(){
+  requestAnimationFrame(animateTwin);tT+=.025;
+  tGroup.rotation.y=tRY;tGroup.rotation.x=tRX;
+  const b=1+.045*Math.abs(Math.sin(tT*2.3));tHeart.scale.set(.9*b,1.18*b,.82*b);
+  tLungs.forEach((l,i)=>{const br=1+.045*Math.sin(tT*.7+(i*.3));l.scale.y=br*1.35;});
+  tLad.material.emissiveIntensity=.3+.5*Math.abs(Math.sin(tT*3.5));
+  tGroup.position.y=.04*Math.sin(tT*.4);
+  tRen.render(tScene,tCam);
+}
+
+function setTView(v){
+  if(v==='full'){tCam.position.set(0,.2,5.5);tRX=0;tRY=0;}
+  else if(v==='heart'){tCam.position.set(0,0,3.2);tRX=0;tRY=0;}
+  else if(v==='vessels'){tCam.position.set(.3,-.1,3.4);tRY=-.3;}
+}
+function togWire(){wireOn=!wireOn;document.getElementById('wireBtn').classList.toggle('on',wireOn);tSkin.material.wireframe=wireOn;tLungs.forEach(l=>l.material.wireframe=wireOn);tRibs.forEach(r=>r.material.wireframe=wireOn);}
+function togSkin(){skinOn=!skinOn;tSkin.visible=skinOn;}
+
+const ODATA={
+  lv:{name:'LEFT VENTRICLE',fn:'42% EF',wm:'Hypokinetic',edv:'180 mL',st:'IMPAIRED',stc:'var(--a)',notes:'Reduced EF due to chronic ischemia from LAD territory. Post-revascularization improvement expected to 50-55%.'},
+  lad:{name:'LAD ARTERY',fn:'78% Stenosis ⚠',wm:'N/A',edv:'N/A',st:'CRITICAL',stc:'var(--r)',notes:'Critical proximal LAD stenosis. Primary target for LIMA bypass. Digital twin shows exact anatomy for safe anastomosis.'},
+  rca:{name:'RIGHT CORONARY ART.',fn:'45% Stenosis',wm:'N/A',edv:'N/A',st:'MODERATE',stc:'var(--a)',notes:'Moderate RCA stenosis requiring bypass. Saphenous vein graft planned. Distal site identified in 3D model.'},
+  cx:{name:'CIRCUMFLEX ARTERY',fn:'12% Stenosis',wm:'N/A',edv:'N/A',st:'MILD',stc:'var(--g)',notes:'Mild Cx disease with anomalous OM branch variant. Digital twin mapped this rare variant eliminating surgical surprise.'},
+  lima:{name:'LIMA GRAFT VESSEL',fn:'100% Patent',wm:'N/A',edv:'N/A',st:'EXCELLENT',stc:'var(--g)',notes:'Left Internal Mammary Artery fully patent, 3.2mm diameter. Ideal conduit for LAD bypass with superior patency.'},
+  aorta:{name:'ASCENDING AORTA',fn:'Mod. Calcification',wm:'N/A',edv:'N/A',st:'CAUTION',stc:'var(--a)',notes:'Moderate calcification at aortic root. Cross-clamp site carefully selected proximal to calcium deposits.'},
+};
+function selOrgan(id,card){
+  document.querySelectorAll('.organ-btn').forEach(c=>c.classList.remove('sel'));card.classList.add('sel');
+  const d=ODATA[id];
+  document.getElementById('od_name').textContent=d.name;
+  document.getElementById('od_fn').textContent=d.fn;
+  document.getElementById('od_wm').textContent=d.wm;
+  document.getElementById('od_edv').textContent=d.edv;
+  document.getElementById('od_st').textContent=d.st;
+  document.getElementById('od_st').style.color=d.stc;
+  document.getElementById('od_notes').textContent=d.notes;
+  document.getElementById('hudSel').textContent='SELECTED: '+d.name;
+  if(id==='lv'||id==='lad'){tCam.position.set(-.1,0,3.2);tRY=.1;}
+  else if(id==='rca'){tCam.position.set(.2,0,3);tRY=-.2;}
+  else if(id==='lima'){tCam.position.set(-.3,0,3);tRY=.2;}
+  else setTView('full');
+}
+
+// ═══════════════════════════════════════════════════
+//  SURGERY SIMULATION — INTERACTIVE CANVAS
+// ═══════════════════════════════════════════════════
+let simCtx,simCv,simAnim,simT=0;
+let hoveredZone=null;
+const drawnMarkers=[];
+
+function initSimCanvas(){
+  simCv=document.getElementById('simCanvas');
+  simCtx=simCv.getContext('2d');
+  resizeSim();
+  window.addEventListener('resize',resizeSim);
+
+  simCv.addEventListener('mousemove',e=>{
+    const r=simCv.getBoundingClientRect();
+    const mx=(e.clientX-r.left)*(simCv.width/r.width);
+    const my=(e.clientY-r.top)*(simCv.height/r.height);
+    hoveredZone=null;
+    if(S.simPhase!=='running')return;
+    const zones=getZones();
+    for(const [id,z] of Object.entries(zones)){
+      const dx=mx-z.x,dy=my-z.y;
+      if(Math.sqrt(dx*dx+dy*dy)<z.r){hoveredZone=id;break;}
+    }
+    simCv.style.cursor=hoveredZone?'pointer':'crosshair';
+  });
+
+  simCv.addEventListener('click',e=>{
+    if(S.simPhase!=='running'||S.pendingStepComplete)return;
+    const r=simCv.getBoundingClientRect();
+    const mx=(e.clientX-r.left)*(simCv.width/r.width);
+    const my=(e.clientY-r.top)*(simCv.height/r.height);
+    handleSurgeryClick(mx,my);
+  });
+
+  drawSimIdle();
+}
+
+function resizeSim(){
+  const vp=document.querySelector('.sim-center');if(!vp||!simCv)return;
+  const h=vp.clientHeight-70;
+  simCv.width=vp.clientWidth;simCv.height=Math.max(h,200);
+}
+
+function getZones(){
+  const w=simCv.width,h=simCv.height;
+  const cx=w/2-15,cy=h/2+5;
+  return{
+    chest:  {x:cx,    y:cy-50, r:85, label:'Chest / Sternum',      color:'rgba(0,212,255,.3)'},
+    aorta:  {x:cx-8,  y:cy-58, r:28, label:'Ascending Aorta',       color:'rgba(200,30,50,.4)'},
+    heart:  {x:cx-14, y:cy-15, r:38, label:'Heart',                 color:'rgba(255,30,60,.35)'},
+    lad:    {x:cx-12, y:cy+12, r:22, label:'LAD Artery',            color:'rgba(255,80,0,.45)'},
+    rca:    {x:cx+22, y:cy+8,  r:20, label:'RCA',                   color:'rgba(180,20,40,.35)'},
+    cx:     {x:cx-26, y:cy+12, r:20, label:'Circumflex Artery',     color:'rgba(180,20,40,.35)'},
+    lima:   {x:cx-72, y:cy-25, r:24, label:'LIMA Vessel',           color:'rgba(0,200,80,.35)'},
+  };
+}
+
+function handleSurgeryClick(mx,my){
+  const zones=getZones();
+  const step=STEPS[S.simStep];
+  if(!step)return;
+  let clickedZone=null;
+  for(const[id,z] of Object.entries(zones)){const dx=mx-z.x,dy=my-z.y;if(Math.sqrt(dx*dx+dy*dy)<z.r){clickedZone=id;break;}}
+
+  if(!clickedZone){
+    // Clicked empty area
+    showFeedback('WRONG AREA',`rgba(255,45,85,.9)`);
+    S.errorsThisStep++;S.totalErrors++;
+    document.getElementById('sbErr').textContent=S.totalErrors;
+    showHint(`Click on: ${zones[step.zone]?.label||step.zone}`);
+    speak('Wrong area. '+zones[step.zone]?.label+' is highlighted.');
+    return;
+  }
+  if(S.tool!==step.tool){
+    showFeedback('WRONG TOOL',`rgba(255,183,0,.9)`);
+    S.errorsThisStep++;S.totalErrors++;
+    document.getElementById('sbErr').textContent=S.totalErrors;
+    showHint(`Select tool: ${step.tool.toUpperCase()}`);
+    speak('Wrong tool. Use the '+step.tool+' for this step.');
+    return;
+  }
+  if(clickedZone!==step.zone){
+    showFeedback('WRONG ORGAN',`rgba(255,183,0,.9)`);
+    S.errorsThisStep++;S.totalErrors++;
+    document.getElementById('sbErr').textContent=S.totalErrors;
+    showHint(`Target: ${zones[step.zone]?.label||step.zone}`);
+    speak('Wrong organ. Target is '+zones[step.zone]?.label);
+    return;
+  }
+
+  // ✓ Correct!
+  S.pendingStepComplete=true;
+  const z=zones[clickedZone];
+  drawnMarkers.push({type:step.tool,x:z.x,y:z.y,zone:clickedZone,age:0,step:S.simStep});
+  showFeedback('✓ CORRECT',`rgba(0,255,136,.95)`);
+  speak(`${step.title} complete.`);
+
+  document.getElementById('st'+S.simStep).classList.remove('act');
+  document.getElementById('st'+S.simStep).classList.add('done');
+
+  const pct=Math.round(((S.simStep+1)/STEPS.length)*100);
+  document.getElementById('simFill').style.width=pct+'%';
+  document.getElementById('simPct').textContent=pct+'%';
+
+  // Get AI feedback then proceed
+  getAIFeedback(step,S.errorsThisStep,S.simElapsed).then(msg=>{
+    showAIMsg(msg,S.errorsThisStep===0?'ok':S.errorsThisStep<=2?'warn':'crit');
+    addAIHistory(step.title,msg);
+    S.simStep++;S.errorsThisStep=0;S.pendingStepComplete=false;
+    if(S.simStep>=STEPS.length){finishSim();}
+    else{
+      document.getElementById('st'+S.simStep).classList.add('act');
+      updateStepInfo();
+      const ns=STEPS[S.simStep];
+      speak(`Step ${S.simStep+1}: ${ns.title}. Use ${ns.tool}. Click on ${getZones()[ns.zone]?.label||ns.zone}.`);
+    }
+  });
+}
+
+function getZoneForStep(){
+  const z=getZones();const step=STEPS[S.simStep];
+  return step?z[step.zone]:null;
+}
+
+function showHint(msg){
+  const h=document.getElementById('hintTag');
+  h.textContent=msg;h.style.display='block';
+  clearTimeout(h._t);h._t=setTimeout(()=>h.style.display='none',3000);
+}
+
+// ═══════════════════════════════════════════════════
+//  SURGERY CANVAS DRAWING
+// ═══════════════════════════════════════════════════
+function drawSimIdle(){
+  if(!simCtx)return;
+  cancelAnimationFrame(simAnim);
+  const w=simCv.width,h=simCv.height;
+  simCtx.fillStyle='#010911';simCtx.fillRect(0,0,w,h);
+  for(let x=0;x<w;x+=44){simCtx.strokeStyle='rgba(0,212,255,.025)';simCtx.lineWidth=1;simCtx.beginPath();simCtx.moveTo(x,0);simCtx.lineTo(x,h);simCtx.stroke();}
+  for(let y=0;y<h;y+=44){simCtx.beginPath();simCtx.moveTo(0,y);simCtx.lineTo(w,y);simCtx.stroke();}
+  simCtx.fillStyle='rgba(0,212,255,.12)';simCtx.font='bold 13px Orbitron,monospace';simCtx.textAlign='center';
+  simCtx.fillText('DIGITAL TWIN — READY FOR INTERACTIVE SURGERY',w/2,h/2-12);
+  simCtx.font='10px Barlow Condensed,sans-serif';simCtx.fillStyle='rgba(0,212,255,.06)';
+  simCtx.fillText('Select surgical tool · Press START · Click organs to operate',w/2,h/2+14);
+}
+
+function drawSimRunning(){
+  simAnim=requestAnimationFrame(drawSimRunning);
+  simT+=.03;
+  const w=simCv.width,h=simCv.height;
+  const ctx=simCtx;
+  ctx.fillStyle='#010911';ctx.fillRect(0,0,w,h);
+
+  // Scanline effect
+  for(let y=0;y<h;y+=3){ctx.fillStyle=`rgba(0,0,0,${.04+.015*Math.sin(y*.1+simT)})`;ctx.fillRect(0,y,w,2);}
+
+  const cx=w/2-15,cy=h/2+5;
+
+  // Surgical drape
+  ctx.fillStyle='#011a0a';ctx.fillRect(0,0,w,h);
+  // OR light gradient
+  const og=ctx.createRadialGradient(cx,cy,10,cx,cy,w*.6);
+  og.addColorStop(0,'rgba(255,255,240,.04)');og.addColorStop(1,'transparent');
+  ctx.fillStyle=og;ctx.fillRect(0,0,w,h);
+
+  // Body outline — glowing
+  ctx.shadowColor='rgba(0,212,255,.2)';ctx.shadowBlur=20;
+  ctx.strokeStyle='rgba(0,212,255,.08)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.ellipse(cx,cy,130,175,0,0,Math.PI*2);ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // Ribs
+  ctx.strokeStyle='rgba(40,70,100,.45)';ctx.lineWidth=1;
+  for(let i=0;i<7;i++){ctx.beginPath();ctx.ellipse(cx,cy-70+i*22,108-i*2,12,0,0,Math.PI);ctx.stroke();}
+  // Sternum
+  ctx.strokeStyle='rgba(50,80,120,.5)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(cx,cy-80);ctx.lineTo(cx,cy+55);ctx.stroke();
+
+  // Sternotomy (if step ≥ 1)
+  if(S.simStep>=1||drawnMarkers.some(m=>m.zone==='chest')){
+    const cutProgress=Math.min((S.simStep>=1?1:0),1);
+    ctx.strokeStyle='rgba(255,200,200,.8)';ctx.lineWidth=1.5;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(cx,cy-78);ctx.lineTo(cx,cy+54);ctx.stroke();
+    // Retracted edges
+    ctx.strokeStyle='rgba(160,90,90,.4)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx-8,cy-78);ctx.lineTo(cx-12,cy+54);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+8,cy-78);ctx.lineTo(cx+12,cy+54);ctx.stroke();
+  }
+
+  // Heart (beating)
+  const beat=1+.06*Math.abs(Math.sin(simT*2.5));
+  ctx.save();ctx.translate(cx-14,cy-14);ctx.scale(beat,beat);
+  const hg=ctx.createRadialGradient(0,0,5,0,0,32);
+  hg.addColorStop(0,'rgba(255,50,80,.85)');hg.addColorStop(1,'rgba(160,20,40,.5)');
+  ctx.fillStyle=hg;ctx.shadowColor='rgba(255,30,60,.4)';ctx.shadowBlur=12;
+  ctx.beginPath();ctx.ellipse(0,0,28,35,.15,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;ctx.restore();
+
+  // Aorta
+  ctx.strokeStyle='rgba(180,20,40,.6)';ctx.lineWidth=5;
+  ctx.beginPath();ctx.moveTo(cx-9,cy-50);ctx.lineTo(cx-9,cy-74);ctx.stroke();
+  // Aortic arch
+  ctx.strokeStyle='rgba(160,15,35,.5)';ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(cx-9,cy-74);ctx.quadraticCurveTo(cx+8,cy-82,cx+22,cy-68);ctx.stroke();
+
+  // LAD (pulsing critical)
+  const ladA=.4+.5*Math.abs(Math.sin(simT*3.8));
+  ctx.strokeStyle=`rgba(255,80,0,${ladA})`;ctx.lineWidth=2.5;ctx.shadowColor=`rgba(255,80,0,${ladA*.6})`;ctx.shadowBlur=8;
+  ctx.beginPath();ctx.moveTo(cx-10,cy-18);ctx.bezierCurveTo(cx-9,cy+15,ctx-7,cy+38,cx-6,cy+60);ctx.stroke();
+  ctx.shadowBlur=0;
+  // Stenosis marker
+  ctx.fillStyle=`rgba(255,60,0,${ladA})`;ctx.strokeStyle='rgba(255,120,0,.9)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(cx-9,cy+8,7,0,Math.PI*2);ctx.fill();ctx.stroke();
+
+  // RCA
+  ctx.strokeStyle='rgba(160,15,35,.5)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(cx+11,cy-14);ctx.bezierCurveTo(cx+30,cy+5,cx+32,cy+32,cx+24,cy+52);ctx.stroke();
+  // Cx
+  ctx.beginPath();ctx.moveTo(cx-11,cy-14);ctx.bezierCurveTo(cx-32,cy+5,cx-34,cy+32,cx-26,cy+52);ctx.stroke();
+
+  // LIMA
+  ctx.strokeStyle='rgba(0,180,60,.5)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(cx-75,cy-22);ctx.bezierCurveTo(cx-55,cy-18,cx-35,cy-8,cx-10,cy);ctx.stroke();
+
+  // CPB lines (if step ≥ 2)
+  if(drawnMarkers.some(m=>m.zone==='aorta'&&m.type==='cannula')){
+    ctx.strokeStyle='rgba(0,150,220,.6)';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(cx-8,cy-72);ctx.lineTo(cx-8,cy-120);ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Draw completed markers
+  drawnMarkers.forEach(m=>{
+    m.age++;
+    if(m.type==='scalpel'){
+      ctx.strokeStyle='rgba(255,180,180,.7)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(m.x-20,m.y);ctx.lineTo(m.x+20,m.y);ctx.stroke();
+    }else if(m.type==='suture'){
+      ctx.strokeStyle='rgba(100,180,255,.8)';ctx.lineWidth=1;
+      for(let i=-3;i<=3;i++){ctx.beginPath();ctx.moveTo(m.x+i*5-2,m.y-5);ctx.lineTo(m.x+i*5+2,m.y+5);ctx.stroke();}
+    }else if(m.type==='cannula'){
+      ctx.strokeStyle='rgba(0,180,220,.7)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(m.x,m.y);ctx.lineTo(m.x,m.y-30);ctx.stroke();
+      ctx.fillStyle='rgba(0,180,220,.5)';ctx.beginPath();ctx.arc(m.x,m.y,4,0,Math.PI*2);ctx.fill();
+    }else if(m.type==='clamp'){
+      ctx.strokeStyle='rgba(255,200,0,.8)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.rect(m.x-12,m.y-4,24,8);ctx.stroke();
+    }
+  });
+
+  // Active zone highlight
+  const step=STEPS[S.simStep];
+  if(step&&!S.pendingStepComplete){
+    const zones=getZones();const z=zones[step.zone];
+    if(z){
+      const pulse=.5+.5*Math.abs(Math.sin(simT*2.5));
+      const isHov=hoveredZone===step.zone;
+      const alpha=isHov?.9:.5+.3*pulse;
+      ctx.strokeStyle=`rgba(0,212,255,${alpha})`;ctx.lineWidth=isHov?2:1.5;
+      ctx.shadowColor='rgba(0,212,255,.5)';ctx.shadowBlur=isHov?20:10;
+      // Dashed circle for target
+      ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+      ctx.shadowBlur=0;
+      // Label
+      if(isHov){
+        ctx.fillStyle='rgba(0,212,255,.9)';ctx.font='bold 10px Orbitron,monospace';ctx.textAlign='center';
+        ctx.fillText(z.label.toUpperCase(),z.x,z.y-z.r-8);
+      }
+      // Tool icon
+      const toolIcons={scalpel:'🔪',cannula:'💉',suture:'🧵',clamp:'🗜️',cautery:'⚡',forceps:'🩺'};
+      ctx.font='16px serif';ctx.textAlign='center';ctx.fillText(toolIcons[step.tool]||'?',z.x,z.y+6);
+    }
+    // Wrong zone dim indicators
+    for(const[id,z] of Object.entries(zones)){
+      if(id!==step.zone&&hoveredZone===id){
+        ctx.strokeStyle='rgba(255,45,85,.4)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+        ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+      }
+    }
+  }
+
+  // Timer
+  ctx.fillStyle='rgba(0,212,255,.25)';ctx.font='10px Share Tech Mono,monospace';ctx.textAlign='right';
+  ctx.fillText('INTERACTIVE SURGERY MODE — CLICK HIGHLIGHTED ORGAN',w-12,h-12);
+}
+
+// ═══════════════════════════════════════════════════
+//  SIM CONTROL
+// ═══════════════════════════════════════════════════
+function handleSimBtn(){
+  if(S.simRunning)return;
+  if(S.simCount>=10){goTab(4,document.querySelectorAll('.nt')[4]);return;}
+  startSim();
+}
+
+function startSim(){
+  S.simRunning=true;S.simPhase='running';S.simStep=0;S.simElapsed=0;
+  S.totalErrors=S.totalErrors;S.errorsThisStep=0;drawnMarkers.length=0;
+  document.getElementById('simBtn').textContent='⟳ SIMULATION RUNNING...';
+  document.getElementById('simBtn').style.borderColor='var(--a)';
+  document.getElementById('simBtn').style.color='var(--a)';
+  document.getElementById('cwarn').classList.remove('show');document.getElementById('ccrit').classList.remove('show');
+  document.getElementById('aiMsg').classList.remove('show');
+  // Reset step trackers
+  for(let i=0;i<STEPS.length;i++){const e=document.getElementById('st'+i);if(e){e.classList.remove('done','act');}}
+  document.getElementById('st0').classList.add('act');
+  document.getElementById('simFill').style.width='0%';document.getElementById('simPct').textContent='0%';
+  document.getElementById('sbAcc').textContent='—';
+  S.simInt=setInterval(()=>{S.simElapsed++;updateTimer();},100);
+  updateStepInfo();
+  drawSimRunning();
+  const s=STEPS[0];
+  speak(`Simulation ${S.simCount+1} starting. Step 1: ${s.title}. ${s.desc}. Select the ${s.tool} and click on ${getZones()[s.zone]?.label||s.zone}.`);
+}
+
+function updateStepInfo(){
+  const s=STEPS[S.simStep];if(!s)return;
+  document.getElementById('stepInfo').innerHTML=
+    `<strong style="color:var(--c);font-size:13px">Step ${S.simStep+1}: ${s.title}</strong><br>
+     <span style="color:var(--t3)">${s.desc}</span><br><br>
+     🔧 Select tool: <strong style="color:var(--w)">${s.tool.toUpperCase()}</strong><br>
+     🎯 Click on: <strong style="color:var(--c)">${getZones()[s.zone]?.label||s.zone}</strong>`;
+}
+
+function updateTimer(){
+  const m=Math.floor(S.simElapsed/600),sec=Math.floor((S.simElapsed%600)/10);
+  document.getElementById('sbTimer').textContent=`${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function finishSim(){
+  clearInterval(S.simInt);
+  S.simRunning=false;S.simPhase='done';
+  const dur=Math.round(S.simElapsed/10);
+  S.simCount++;S.totalDur+=dur;
+  const base=60+S.simCount*4;const errPenalty=S.totalErrors*2.5;
+  const score=Math.min(99,Math.round(base-errPenalty+Math.random()*5));
+  if(score>S.bestScore)S.bestScore=score;
+  S.scores.push(score);
+
+  document.getElementById('sbAcc').textContent=score+'%';
+  document.getElementById('srVal').textContent=score+'%';
+  document.getElementById('srCircle').style.strokeDashoffset=238.8*(1-score/100);
+  document.getElementById('stSims').textContent=S.simCount;
+  document.getElementById('stBest').textContent=S.bestScore+'%';
+  document.getElementById('stErr').textContent=S.totalErrors;
+  document.getElementById('stDur').textContent=Math.round(S.totalDur/S.simCount)+' min';
+  document.getElementById('simBadge').textContent=S.simCount;
+
+  updateReadiness();
+
+  const cleared=S.simCount>=10;
+  document.getElementById('stClear').textContent=cleared?'CLEARED ✓':'PENDING';
+  document.getElementById('stClear').style.color=cleared?'var(--g)':'var(--a)';
+
+  // Show modal
+  document.getElementById('mTitle').textContent=cleared?'✅ SURGEON CLEARED FOR OR!':'✓ SIMULATION COMPLETE';
+  document.getElementById('mScore').textContent=score+'%';
+  document.getElementById('mDur').textContent=dur+' min';
+  document.getElementById('mErr').textContent=S.totalErrors+' total';
+  document.getElementById('mSims').textContent=S.simCount+'/10';
+  if(cleared)document.getElementById('mClearRow').style.display='flex';
+  document.getElementById('modal').classList.add('show');
+
+  const btn=document.getElementById('simBtn');
+  btn.textContent=cleared?'✓ VIEW AI REPORT':`▶ RUN SIMULATION (${S.simCount}/10)`;
+  btn.style.borderColor=cleared?'var(--g)':'var(--c)';btn.style.color=cleared?'var(--g)':'var(--c)';
+  if(cleared){document.getElementById('repBadge').style.display='inline';}
+
+  // Submit form
+  document.getElementById('noScoreMsg').style.display='none';
+  document.getElementById('submitForm').style.display='flex';
+  document.getElementById('yourScoreBox').style.display='block';
+  document.getElementById('ysScore').textContent=S.bestScore+'%';
+  document.getElementById('ySims').textContent=S.simCount;
+  document.getElementById('yErr').textContent=S.totalErrors;
+
+  speak(cleared?'Congratulations! You have achieved surgical clearance for the operating room. 10 simulations completed.':
+    `Simulation ${S.simCount} complete. Score: ${score} percent. ${10-S.simCount} simulations remaining for clearance.`);
+}
+
+function resetSim(){
+  clearInterval(S.simInt);cancelAnimationFrame(simAnim);
+  S.simRunning=false;S.simPhase='idle';S.simStep=0;S.simElapsed=0;S.errorsThisStep=0;S.pendingStepComplete=false;
+  drawnMarkers.length=0;hoveredZone=null;
+  for(let i=0;i<STEPS.length;i++){const e=document.getElementById('st'+i);if(e)e.classList.remove('done','act');}
+  document.getElementById('st0').classList.add('act');
+  document.getElementById('simFill').style.width='0%';document.getElementById('simPct').textContent='0%';
+  document.getElementById('sbTimer').textContent='00:00';document.getElementById('sbAcc').textContent='—';
+  document.getElementById('sbErr').textContent=S.totalErrors;
+  document.getElementById('stepInfo').innerHTML='Press <strong style="color:var(--c)">START SIMULATION</strong> to begin.<br><br>🖱 <strong style="color:var(--t)">Click the highlighted organs</strong> with the correct tool.';
+  document.getElementById('cwarn').classList.remove('show');document.getElementById('ccrit').classList.remove('show');
+  document.getElementById('hintTag').style.display='none';
+  if(S.simCount<10){const btn=document.getElementById('simBtn');btn.textContent=S.simCount>0?`▶ RUN SIMULATION (${S.simCount}/10)`:'▶ START SIMULATION';btn.style.borderColor='var(--c)';btn.style.color='var(--c)';}
+  drawSimIdle();
+}
+
+function selTool(t,btn){
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');
+  S.tool=t;
+  if(S.simPhase==='running')showHint(`Tool: ${t.toUpperCase()} selected`);
+}
+
+function showFeedback(msg,color){
+  const el=document.getElementById('sfMsg');
+  el.textContent=msg;el.style.color=color;
+  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
+}
+
+function updateReadiness(){
+  const pct=Math.min(S.simCount*10,100);
+  document.getElementById('readyPct').textContent=pct+'%';
+  document.getElementById('rRingCircle').style.strokeDashoffset=301.6*(1-pct/100);
+  document.getElementById('rdSims').textContent=S.simCount+' / 10';
+  document.getElementById('rdBest').textContent=S.bestScore?S.bestScore+'%':'—';
+  document.getElementById('rdErr').textContent=S.totalErrors;
+  const cleared=S.simCount>=10;
+  document.getElementById('rdStatus').textContent=cleared?'CLEARED ✓':'PENDING';
+  document.getElementById('rdStatus').style.color=cleared?'var(--g)':'var(--a)';
+  renderChecklist();
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+
+// ═══════════════════════════════════════════════════
+//  AI MENTOR FEEDBACK — REAL CLAUDE API
+// ═══════════════════════════════════════════════════
+async function getAIFeedback(step,errors,elapsed){
+  document.getElementById('aiLoad').classList.add('show');
+  document.getElementById('aiMsg').classList.remove('show');
+  const dur=Math.round(elapsed/10);
+  const prompt=`You are a senior cardiac surgeon mentoring a resident performing a triple CABG (coronary artery bypass graft) on a digital twin of patient Rahul Sharma, 52M with 78% LAD stenosis, 45% RCA stenosis, and an anomalous OM branch variant.
+
+The resident just completed surgical step: "${step.title}" (${step.desc})
+- Time taken: ${dur} seconds
+- Errors on this step: ${errors}
+- Tool used correctly: ${errors===0?'Yes':'No (needed corrections)'}
+- Overall simulation: ${S.simCount+1} of 10
+
+Give concise surgical mentor feedback (2-3 sentences max):
+1. Comment on this specific step performance
+2. One key technical pearl about this step in real CABG surgery
+3. Brief tip for the next step
+
+Be specific, medical, and encouraging. Tone: experienced surgeon mentor. No bullet points, just flowing sentences.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await res.json();
+    const txt=data.content?.find(b=>b.type==='text')?.text||'Step completed. Continue to next procedure.';
+    document.getElementById('aiLoad').classList.remove('show');
+    return txt;
+  }catch(e){
+    document.getElementById('aiLoad').classList.remove('show');
+    const fallbacks={
+      'Median Sternotomy':'Good sternotomy technique. In real surgery, ensure the saw blade stays precisely midline to avoid entering a pleural space. Next step: careful aortic cannulation — identify the optimal site before inserting.',
+      'Cardiopulmonary Bypass':'CPB cannulation complete. Remember to confirm correct placement with TEE before going on bypass. The venous cannula position critically affects drainage — poor placement causes inadequate decompression. Prepare for cardioplegia.',
+      'Cardioplegia Arrest':'Cardioplegia administered. In this patient, the calcified aortic root increases the risk of incomplete arrest — always verify ECG flatline before proceeding. Now harvest the LIMA carefully to preserve maximum length.',
+      'LIMA Graft Harvest':'LIMA harvested. The key technical point is leaving adequate pedicle tissue to maintain blood flow to the mammary branch. A skeletonized LIMA has better flow but higher risk of spasm — use papaverine. Proceed to proximal aortic anastomosis.',
+      'Proximal Anastomosis':'Proximal anastomosis done well. The partial clamp technique on this patient carries calcification risk — a manual side-biting clamp gives better control than automated. Now begin the critical distal anastomoses.',
+      'LAD Distal Anastomosis':'LAD anastomosis to this stenotic vessel requires precision. Note that with 78% stenosis, the coronary is often smaller beyond the lesion — use 7-0 prolene for better tissue approximation. The RCA bypass is next.',
+      'RCA Distal Anastomosis':'RCA anastomosis complete. With 45% disease, ensure your anastomosis is at least 1cm distal to the stenosis for effective revascularization. Proceed to the Cx territory — remember the anomalous OM branch mapped in the twin.',
+      'Cx Distal Anastomosis':'Excellent management of the anomalous OM branch variant. In traditional 2D planning this would have been a surprise — your digital twin training was critical here. Prepare for the most delicate phase: heart restart.',
+      'Weaning & De-air':'Good weaning technique. Ensure complete de-airing before releasing the cross-clamp — even tiny air emboli cause significant neurological damage. Watch for ventricular fibrillation on restart and have defibrillator ready.',
+      'Sternal Closure':'Closure complete. Use at minimum 6 sternal wires in this patient given his larger frame. Ensure all chest tubes are functional before skin closure. Excellent simulation — proceed to post-op handover.'
+    };
+    return fallbacks[step.title]||`${step.title} performed. Good technique — continue building surgical muscle memory through repeated simulation. Each run improves your 3D spatial understanding of this patient's unique anatomy.`;
+  }
+}
+
+function showAIMsg(msg,type){
+  const el=document.getElementById('aiMsg');
+  const step=STEPS[Math.max(0,S.simStep-1)];
+  el.className=`ai-msg ${type} show`;
+  el.innerHTML=`<div class="ai-msg-head">🤖 AI MENTOR — ${step?.title?.toUpperCase()||'STEP FEEDBACK'}</div>${msg}`;
+  speak(msg);
+}
+
+function addAIHistory(stepName,msg){
+  const h=document.getElementById('aiHistory');
+  const item=document.createElement('div');item.className='ai-hist-item';
+  item.innerHTML=`<strong>Step: ${stepName}</strong>${msg.substring(0,120)}...`;
+  h.appendChild(item);h.scrollTop=h.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════
+//  VOICE — WEB SPEECH API
+// ═══════════════════════════════════════════════════
+function speak(text){
+  if(!S.voiceOn||!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=.95;u.pitch=.9;u.volume=.85;
+  const voices=window.speechSynthesis.getVoices();
+  const preferred=voices.find(v=>v.lang==='en-US'&&v.name.includes('Male'))||voices.find(v=>v.lang==='en-US')||voices[0];
+  if(preferred)u.voice=preferred;
+  window.speechSynthesis.speak(u);
+}
+
+function toggleVoice(){
+  S.voiceOn=!S.voiceOn;
+  const btn=document.getElementById('voiceBtn');
+  btn.classList.toggle('on',S.voiceOn);
+  btn.textContent=S.voiceOn?'🔊 VOICE ON':'🔇 VOICE OFF';
+  if(S.voiceOn)speak('Voice guidance activated. I will guide you through each surgical step.');
+}
+
+// ═══════════════════════════════════════════════════
+//  LEADERBOARD — SHARED STORAGE
+// ═══════════════════════════════════════════════════
+async function loadLB(){
+  const tbody=document.getElementById('lbBody');
+  tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:20px;font-size:11px">Loading leaderboard...</td></tr>';
+  try{
+    let entries=[];
+    // Try shared storage
+    if(window.storage){
+      try{
+        const keys=await window.storage.list('lb:',true);
+        for(const k of (keys?.keys||[])){
+          try{const r=await window.storage.get(k,true);if(r?.value){const d=JSON.parse(r.value);entries.push(d);}}catch(e){}
+        }
+      }catch(e){}
+    }
+    // Demo entries if empty
+    if(entries.length<3){
+      entries=[
+        {name:'Dr. Priya Sharma',score:97,sims:10,errors:2,date:'2026-02-28',...entries[0]},
+        {name:'Dr. Arun Mehta',score:94,sims:10,errors:4,date:'2026-02-27'},
+        {name:'Dr. Sarah Chen',score:91,sims:10,errors:6,date:'2026-02-26'},
+        {name:'Dr. Raj Patel',score:88,sims:8,errors:9,date:'2026-02-25'},
+        {name:'Dr. Emma Wilson',score:84,sims:7,errors:12,date:'2026-02-24'},
+        ...entries.filter(e=>e.name&&!['Dr. Priya Sharma','Dr. Arun Mehta','Dr. Sarah Chen'].includes(e.name))
+      ];
+    }
+    entries.sort((a,b)=>b.score-a.score);
+    tbody.innerHTML=entries.map((e,i)=>{
+      const rc=i===0?'r1':i===1?'r2':i===2?'r3':'rn';
+      return `<tr ${S.surgeonNameUsed&&e.name===S.surgeonNameUsed?'class="lb-mine"':''}>
+        <td><div class="rank-badge ${rc}">${i+1}</div></td>
+        <td class="lb-name">${e.name}</td>
+        <td class="lb-score">${e.score}%</td>
+        <td class="lb-sims">${e.sims}</td>
+        <td class="lb-err">${e.errors}</td>
+        <td style="color:var(--t3);font-size:10px">${e.date||'—'}</td>
+      </tr>`;
+    }).join('');
+  }catch(err){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:20px;font-size:11px">Unable to load leaderboard.</td></tr>';}
+}
+
+async function submitScore(){
+  const name=document.getElementById('surgeonName').value.trim();
+  if(!name){document.getElementById('surgeonName').style.borderColor='var(--r)';return;}
+  if(S.simCount===0){alert('Complete at least 1 simulation first!');return;}
+  S.surgeonNameUsed=name;
+  const entry={name,score:S.bestScore,sims:S.simCount,errors:S.totalErrors,date:new Date().toISOString().split('T')[0]};
+  try{
+    if(window.storage)await window.storage.set(`lb:${name.replace(/\s+/g,'_')}_${Date.now()}`,JSON.stringify(entry),true);
+  }catch(e){}
+  document.getElementById('ysScore').textContent=S.bestScore+'%';
+  speak('Score submitted to global leaderboard. Well done '+name+'.');
+  setTimeout(loadLB,500);
+}
+
+// ═══════════════════════════════════════════════════
+//  AI REPORT GENERATION
+// ═══════════════════════════════════════════════════
+function updateReport(){
+  const cleared=S.simCount>=10;
+  const banner=document.getElementById('readyBanner');
+  banner.className='ready-banner '+(cleared?'rb-ok':'rb-pend');
+  document.getElementById('rbTitle').textContent=cleared?'✅ SURGEON CLEARED FOR OPERATING ROOM':'⏳ SIMULATIONS PENDING';
+  document.getElementById('rbTitle').style.color=cleared?'var(--g)':'var(--r)';
+  document.getElementById('rbSub').textContent=cleared?
+    `${S.simCount} simulations completed · Best score: ${S.bestScore}% · All anomalies pre-mapped by Digital Twin`:
+    `Complete 10 surgical simulations for OR clearance (${S.simCount}/10 done)`;
+  document.getElementById('rSims').textContent=S.simCount;
+  document.getElementById('rAcc').textContent=S.bestScore?S.bestScore+'%':'—';
+  document.getElementById('rDur').textContent=S.simCount?Math.round(S.totalDur/S.simCount)+' min':'—';
+  document.getElementById('rErr').textContent=S.totalErrors;
+}
+
+async function generateReport(){
+  if(S.simCount===0){document.getElementById('repAiContent').textContent='Complete at least 1 simulation before generating your AI assessment.';return;}
+  document.getElementById('repAiSpin').classList.add('show');
+  document.getElementById('repAiContent').textContent='Generating...';
+  document.getElementById('repAiContent').classList.add('loading');
+  const prompt=`You are a senior cardiac surgery program director writing a formal surgical readiness assessment for a resident trainee.
+
+Patient: Rahul Sharma, 52M, CABG×3
+Critical findings: LAD 78% stenosis, RCA 45% stenosis, anomalous OM branch (rare variant), aortic root calcification, LIMA patent 100%
+Procedure: Triple coronary artery bypass grafting
+
+Trainee performance in Digital Twin simulation:
+- Simulations completed: ${S.simCount}/10
+- Best accuracy score: ${S.bestScore}%
+- Total errors across all simulations: ${S.totalErrors}
+- Average procedure duration: ${S.simCount?Math.round(S.totalDur/S.simCount):'-'} minutes
+- OR Clearance status: ${S.simCount>=10?'ACHIEVED':'PENDING'}
+
+Write a formal 3-paragraph surgical readiness assessment that:
+1. Evaluates the trainee's technical progression and skill development
+2. Comments on their preparation for this specific patient's anatomical challenges
+3. Provides a professional verdict on OR readiness and recommendations
+
+Tone: formal medical assessment, specific to cardiac surgery. Be honest but constructive.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await res.json();
+    const txt=data.content?.find(b=>b.type==='text')?.text||'Assessment generation failed.';
+    document.getElementById('repAiContent').textContent=txt;
+    document.getElementById('repAiContent').classList.remove('loading');
+    document.getElementById('repAiSpin').classList.remove('show');
+    speak('AI surgical assessment generated. Please review your performance report.');
+  }catch(e){
+    document.getElementById('repAiContent').textContent=`SURGICAL READINESS ASSESSMENT — ${S.simCount>=10?'CLEARED':'PENDING'}\n\nThe trainee has completed ${S.simCount} of 10 required simulations on the Digital Twin of patient Rahul Sharma. With a best score of ${S.bestScore}% and ${S.totalErrors} total procedural errors, the trainee demonstrates ${S.bestScore>=85?'strong':'developing'} technical understanding of the CABG procedure.\n\nThe Digital Twin platform has ensured that all anatomical surprises — including the critical LAD stenosis at 78%, the rare anomalous OM branch, and the calcified aortic root — are fully rehearsed before entering the operating room. This preparation significantly reduces intraoperative risk.\n\nRecommendation: ${S.simCount>=10?'CLEARED for operating room. The surgeon has demonstrated adequate preparation for this specific patient anatomy through repeated digital twin simulation.':'Continue simulation practice to reach 10-simulation threshold before OR clearance.'}`;
+    document.getElementById('repAiContent').classList.remove('loading');
+    document.getElementById('repAiSpin').classList.remove('show');
+  }
+}
+
+window.addEventListener('resize',()=>{resizeTwin();resizeSim();});
+</script>
+</body>
+</html>

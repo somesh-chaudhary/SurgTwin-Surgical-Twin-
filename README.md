@@ -1,112 +1,98 @@
 # 🚀 SurgTwin  
-### AI-Powered Digital Twin for Safer, Smarter Surgery
+### AI-Powered Digital Twin for Safer, Smarter Surgery (Prototype)
 
-SurgTwin is a human-centered AI platform that creates patient-specific digital twins of organs using medical imaging data. It enables surgeons to virtually rehearse procedures, simulate tissue behavior, and predict surgical risks before entering the operating room.
-
----
-
-## 🌍 The Problem
-
-Every surgery is unique because every patient’s anatomy is different.  
-Yet surgical planning still relies heavily on 2D scans and generalized models.
-
-This gap between planning and real execution increases:
-- Surgical uncertainty  
-- Risk of complications  
-- Procedure time  
-- Physical and emotional stress for patients  
-
-Surgeons deserve predictive tools.  
-Patients deserve safer outcomes.
+SurgTwin is a human-centered AI platform currently in the **prototype phase** that aims to create patient-specific digital twins of organs using medical imaging data. It enables virtual surgical rehearsal to improve planning, precision, and patient safety.
 
 ---
 
-## 💡 Our Solution
+## ⚠️ Project Status
 
-SurgTwin transforms CT/MRI scans into a dynamic 3D digital twin that behaves like a real organ using AI and physics-based simulation.
-
-With SurgTwin, doctors can:
-
-- Visualize patient-specific anatomy in 3D  
-- Rehearse surgeries multiple times  
-- Identify high-risk zones  
-- Test different incision strategies  
-- Predict tissue deformation before real surgery  
-
-We move surgery from **uncertain execution** to **validated preparation**.
+🚧 This is an **ongoing project in the prototype stage**.  
+Core functionalities are under development and testing.
 
 ---
 
-## 🧠 Core Innovation
+## 🌍 Problem
 
-- 🧬 AI-driven organ segmentation (PyTorch)
-- 🧱 Patient-specific 3D reconstruction
-- ⚙️ Physics-based biomechanical simulation (SOFA Framework)
-- 🔍 Risk heatmap visualization
-- 👨‍⚕️ Human-centered clinical decision support
+Every patient has unique anatomy, but surgeries are often planned using 2D scans and generalized models. This creates uncertainty and increases the risk of complications.
 
-Unlike generic simulators, SurgTwin adapts to each individual patient.
+---
+
+## 💡 Prototype Solution
+
+SurgTwin is being developed to:
+
+- Convert CT/MRI scans into 3D organ models  
+- Simulate basic tissue behavior  
+- Allow virtual interaction for surgical rehearsal  
+- Identify potential risk areas  
+
+---
+
+## 🧠 Current Features (Prototype)
+
+- Basic medical image handling  
+- Initial 3D organ reconstruction  
+- Simple visualization of patient-specific models  
+- Early-stage simulation experiments  
 
 ---
 
 ## 🛠 Technology Stack
 
 - Python  
-- PyTorch  
+- PyTorch (AI - in progress)  
 - 3D Slicer  
 - VTK / PyVista  
-- SOFA Framework  
-- NumPy / OpenCV  
+- SOFA Framework (integration ongoing)
 
 ---
 
-## ⚙️ How It Works
+## ⚙️ Workflow (Prototype)
 
-1. Upload anonymized CT/MRI scan (DICOM format).
-2. AI segments the target organ.
-3. A 3D patient-specific mesh is generated.
-4. Biomechanical properties are applied.
-5. Virtual surgical simulation is performed.
-6. Risk insights and deformation results are visualized.
-
----
-
-## 🎯 Impact
-
-- Reduces surgical complications  
-- Improves planning accuracy  
-- Enhances surgeon confidence  
-- Supports personalized healthcare  
-- Enables realistic medical training  
-
-SurgTwin aligns with **AI for Social Good**, focusing on real human impact and patient safety.
+1. Load medical imaging data (DICOM)
+2. Perform initial segmentation (manual/assisted)
+3. Generate 3D model
+4. Visualize structure
+5. Apply basic simulation (experimental)
 
 ---
 
-## 🔮 Future Scope
+## 🎯 Vision
 
-- Real-time intraoperative updates  
-- Blood flow (CFD) simulation integration  
-- VR/AR immersive surgical rehearsal  
-- AI-based optimal incision recommendations  
+The goal is to evolve SurgTwin into a full digital twin platform that enables surgeons to rehearse procedures, predict risks, and improve outcomes before real surgeries.
 
 ---
 
-## 🤝 Built For
+## 🔮 Future Work
 
-- Surgeons  
-- Medical students  
-- Hospitals  
-- Healthcare innovators  
+- Full AI-based segmentation  
+- Advanced physics simulation  
+- Risk heatmap generation  
+- Real-time interaction  
+- VR/AR integration  
 
 ---
 
-## 🏆 Hackathon Vision
+## 🤝 Contribution
 
-SurgTwin reimagines surgery as a predictive, personalized, and technology-assisted experience — where preparation saves lives and technology supports human expertise.
+This is an early-stage project — contributions, ideas, and feedback are welcome.
 
 ---
 
 ## 📜 License
 
-This project is intended for research and educational purposes.
+For research and educational use only..
+
+
+---
+
+## Screenshort
+<img width="1915" height="911" alt="image" src="https://github.com/user-attachments/assets/57223d4f-cbd6-4091-9ebc-dfa909b37720" />
+<img width="1918" height="927" alt="image" src="https://github.com/user-attachments/assets/0e000064-e7b2-47ac-9bc1-60c11e08fa92" />
+<img width="1918" height="927" alt="image" src="https://github.com/user-attachments/assets/33a6599c-fae3-4854-9571-66370cec9776" />
+
+
+
+
+
